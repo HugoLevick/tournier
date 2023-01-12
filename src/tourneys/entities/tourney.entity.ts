@@ -103,6 +103,6 @@ export class Tourney {
   }
 
   private slugify(string: string) {
-    return string.toLocaleLowerCase().replaceAll(' ', '_').replaceAll("'", '');
+    return string.toLocaleLowerCase().replace(/[ ']/gi, '_');
   }
 }
