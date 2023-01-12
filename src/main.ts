@@ -12,6 +12,7 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
     }),
   );
 
@@ -21,4 +22,5 @@ async function bootstrap() {
 
   logger.log('App running on port ' + process.env.PORT);
 }
+
 bootstrap();

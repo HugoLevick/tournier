@@ -55,8 +55,12 @@ export class TourneysService {
     if (!tourney)
       throw new NotFoundException(`Tourney with id ${id} was not found`);
 
-    await this.tourneyRepository.save(tourney);
-    return tourney;
+    try {
+      await this.tourneyRepository.save(tourney);
+      return tourney;
+    } catch (error) {
+      this.handleDBError(error);
+    }
   }
 
   async remove(term: string) {

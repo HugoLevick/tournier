@@ -4,11 +4,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TourneysModule } from './tourneys/tourneys.module';
+import { TmiModule } from './tmi/tmi.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
+
     TourneysModule,
+
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
@@ -19,6 +23,10 @@ import { TourneysModule } from './tourneys/tourneys.module';
       autoLoadEntities: true,
       synchronize: true,
     }),
+
+    TmiModule,
+
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
