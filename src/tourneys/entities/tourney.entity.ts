@@ -1,8 +1,10 @@
+import { User } from '../../auth/entities/user.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
   Column,
   Entity,
+  ManyToOne,
   PrimaryGeneratedColumn,
   Timestamp,
 } from 'typeorm';
@@ -11,6 +13,7 @@ export enum TourneyStatus {
   pending = 'PENDING',
   inProgress = 'INPROGRESS',
   ended = 'ENDED',
+  canceled = 'CANCELED',
 }
 
 @Entity('tourneys')
@@ -67,6 +70,7 @@ export class Tourney {
   @Column('bool', {
     nullable: false,
     default: true,
+    select: false,
   })
   isActive: boolean;
 
@@ -88,6 +92,12 @@ export class Tourney {
     this.startTime = dtoStartTime.toISOString();
     this.endTime = dtoEndTime.toISOString();
   }
+
+  @ManyToOne(() => User, (user) => user.tourneys, {
+    nullable: false,
+    eager: true,
+  })
+  creator: User;
 
   @BeforeUpdate()
   editTourneyOnUpdate() {

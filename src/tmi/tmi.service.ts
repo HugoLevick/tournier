@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as tmi from 'tmi.js';
 
 @Injectable()
 export class TmiService {
+  private logger = new Logger('Tmi');
+
   constructor() {
     this.startBot();
   }
@@ -24,16 +26,16 @@ export class TmiService {
     }
 
     this.tmiClient.on('connected', () => {
-      console.log('hola');
+      this.logger.log('Connected to Twitch');
     });
 
     this.tmiClient.on('message', (channel, tags, message, self) => {
       // Ignore echoed messages.
       if (self) return;
 
-      if (message.toLowerCase() === '!hello') {
+      if (message.startsWith('!')) {
         // "@alca, heya!"
-        this.tmiClient.say(channel, `@${tags.username}, heya!`);
+        this.tmiClient.say(channel, `@${tags.username}, command !${message}`);
       }
     });
   }

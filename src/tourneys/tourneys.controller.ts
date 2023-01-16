@@ -7,23 +7,29 @@ import {
   Param,
   Delete,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { TourneysService } from './tourneys.service';
 import { CreateTourneyDto } from './dto/create-tourney.dto';
 import { UpdateTourneyDto } from './dto/update-tourney.dto';
+import { Auth } from 'src/auth/decorators/auth.decorator';
+import { User, UserRoles } from 'src/auth/entities/user.entity';
+import { PaginationDto } from '../common/dtos/pagination.dto';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
 @Controller('tourneys')
 export class TourneysController {
   constructor(private readonly tourneysService: TourneysService) {}
 
+  @Auth(UserRoles.creator)
   @Post()
-  create(@Body() createTourneyDto: CreateTourneyDto) {
-    return this.tourneysService.create(createTourneyDto);
+  create(@Body() createTourneyDto: CreateTourneyDto, @GetUser() user: User) {
+    return this.tourneysService.create(createTourneyDto, user);
   }
 
   @Get()
-  findAll() {
-    return this.tourneysService.findAll();
+  findAll(@Query() paginationDto: PaginationDto) {
+    return this.tourneysService.findAll(paginationDto);
   }
 
   @Get(':term')
@@ -31,16 +37,19 @@ export class TourneysController {
     return this.tourneysService.findOne(term);
   }
 
+  @Auth(UserRoles.creator)
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTourneyDto: UpdateTourneyDto,
+    @GetUser() user: User,
   ) {
-    return this.tourneysService.update(id, updateTourneyDto);
+    return this.tourneysService.update(id, updateTourneyDto, user);
   }
 
+  @Auth()
   @Delete(':term')
-  remove(@Param('term') term: string) {
-    return this.tourneysService.remove(term);
+  remove(@Param('term') term: string, @GetUser() user: User) {
+    return this.tourneysService.remove(term, user);
   }
 }

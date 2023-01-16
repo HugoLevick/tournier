@@ -12,12 +12,6 @@ import {
   IsIn,
   IsDateString,
 } from 'class-validator';
-import { TourneyStatus } from '../entities/tourney.entity';
-
-let statuses = [];
-for (const status of Object.keys(TourneyStatus)) {
-  statuses.push(TourneyStatus[status]);
-}
 
 export class CreateTourneyDto {
   @IsString()
@@ -45,9 +39,6 @@ export class CreateTourneyDto {
 
   @IsDateString()
   endTime: string;
-
-  @IsIn(statuses)
-  status: TourneyStatus;
 
   @IsNumber()
   @Min(0)
