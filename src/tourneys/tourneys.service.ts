@@ -131,7 +131,7 @@ export class TourneysService {
       const response = await this.tourneyRepository.update(tourney.id, tourney);
       if (response.affected < 1)
         throw new InternalServerErrorException('Something unexpected happened');
-
+      //
       return {
         statusCode: '200',
         message: 'ok',
