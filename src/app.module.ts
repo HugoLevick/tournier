@@ -6,10 +6,20 @@ import { AppService } from './app.service';
 import { TourneysModule } from './tourneys/tourneys.module';
 import { TmiModule } from './tmi/tmi.module';
 import { AuthModule } from './auth/auth.module';
+import { join } from 'path';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
+
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+      //TODO: Redirect to index when there is not a route
+      serveStaticOptions: {
+        fallthrough: false,
+      },
+    }),
 
     TourneysModule,
 
