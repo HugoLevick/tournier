@@ -8,7 +8,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { LoginUserDto } from './dto/login-user-dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
@@ -33,7 +32,6 @@ export class AuthService {
       });
 
       await this.userRepository.save(user);
-      delete user.id;
 
       return user;
     } catch (error) {
