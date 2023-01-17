@@ -79,7 +79,7 @@ export class TourneysService {
       !user.roles.includes(UserRoles.admin)
     ) {
       throw new ForbiddenException(
-        `Tourney '${id}' does not belong to ${user.username}`,
+        `Tourney '${id}' does not belong to ${user.twitchUsername}`,
       );
     }
 
@@ -121,7 +121,7 @@ export class TourneysService {
 
     if (tourney.creator.id !== user.id && !user.roles.includes(UserRoles.admin))
       throw new ForbiddenException(
-        `Tourney '${term}' does not belong to ${user.username}`,
+        `Tourney '${term}' does not belong to ${user.twitchUsername}`,
       );
 
     tourney.isActive = false;

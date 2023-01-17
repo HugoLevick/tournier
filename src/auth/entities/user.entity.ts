@@ -12,6 +12,7 @@ export enum UserRoles {
   user = 'USER',
   creator = 'CREATOR',
   admin = 'ADMIN',
+  owner = 'OWNER',
 }
 
 @Entity('users')
@@ -30,19 +31,13 @@ export class User {
     nullable: false,
     unique: true,
   })
-  username: string;
-
-  @Column('text', {
-    nullable: true,
-    unique: true,
-  })
   twitchUsername: string;
 
   @Column('text', {
     nullable: false,
-    select: false,
+    unique: true,
   })
-  password: string;
+  twitchId: string;
 
   @Column('text', {
     array: true,
@@ -60,7 +55,7 @@ export class User {
   @OneToMany(() => Tourney, (tourney) => tourney.creator, {
     cascade: true,
   })
-  tourneys?: Tourney[];
+  tourneysHosted?: Tourney[];
 
   @BeforeInsert()
   @BeforeUpdate()

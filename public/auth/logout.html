@@ -1,0 +1,8 @@
+<script>
+  async function logout() {
+    await localStorage.removeItem('JWT');
+    window.location = '/';
+  }
+
+  logout();
+</script>

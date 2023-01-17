@@ -93,7 +93,7 @@ export class Tourney {
     this.endTime = dtoEndTime.toISOString();
   }
 
-  @ManyToOne(() => User, (user) => user.tourneys, {
+  @ManyToOne(() => User, (user) => user.tourneysHosted, {
     nullable: false,
     eager: true,
   })

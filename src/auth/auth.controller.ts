@@ -6,18 +6,27 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  Redirect,
 } from '@nestjs/common';
 import { ParseUUIDPipe } from '@nestjs/common/pipes';
 import { AuthService } from './auth.service';
-import { RegisterUserDto } from './dto/create-user.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginUserDto } from './dto/login-user-dto';
 import { Auth } from './decorators/auth.decorator';
-import { UserRoles } from './entities/user.entity';
+import { UserRoles, User } from './entities/user.entity';
+import { GetUser } from './decorators/get-user.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Auth()
+  @Get('validate')
+  validate(@GetUser() user: User) {
+    return user;
+  }
 
   @Post('register')
   register(@Body() registerUserDto: RegisterUserDto) {

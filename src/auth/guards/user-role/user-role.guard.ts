@@ -32,7 +32,7 @@ export class UserRoleGuard implements CanActivate {
     }
 
     throw new ForbiddenException(
-      `User ${user.username} needs a valid role: [${validRoles}]`,
+      `User ${user.twitchUsername} needs a valid role: [${validRoles}]`,
     );
   }
 }

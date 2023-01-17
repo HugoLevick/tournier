@@ -2,24 +2,23 @@
     --headingFont: 'Epilogue', sans-serif;
     --textFont: 'Inter', sans-serif;
 
-    --primary: rgb(68, 123, 181);
+    --background: rgb(45, 45, 45);
+    --primary: rgb(174, 122, 8);
     --secondary: #E1E1E1;
 }
 
 html {
     font-family: var(--textFont);
+    color: white;
     box-sizing: border-box;
     font-size: 62.5%;
+    background-color: var(--background);
 }
 
 *,
 *:before,
 *:after {
     box-sizing: inherit;
-}
-
-* {
-    background-color: var(--primary);
 }
 
 /*Global*/
@@ -71,13 +70,99 @@ a:visited {
     align-items: center;
     justify-content: space-between;
     padding: 0 5rem;
-    border-bottom: 5px black solid;
+    border-bottom: 5px var(--primary) solid;
 }
 
-body {
+/* Main */
+
+main {
     display: flex;
-    text-align: center;
-    justify-content: center;
     flex-direction: column;
-    height: 100vh;
+    align-items: center;
+
+}
+
+/* Tournament grid */
+
+.tournament-grid {
+    display: grid;
+    grid-auto-rows: auto;
+    grid-template-columns: 1fr 1fr;
+    width: 83%;
+    max-width: 170rem;
+    gap: 2rem;
+}
+
+/* Tournament card */
+
+.tournament {
+    display: grid;
+    grid-template-areas: 
+    "img title title title"
+    "img starts-at starts-at prize"
+    "img starts-at starts-at host";
+    text-align: justify;
+    border: 3px solid var(--primary);
+    border-radius: 1.3rem;
+}
+
+.tournament:hover {
+    grid-template-areas:
+    "img title title title"
+    "img starts-at starts-at prize"
+    "img starts-at starts-at host"
+    "sign-up sign-up sign-up sign-up";
+    clip-path: polygon(0 0, 100% 0%, 100% 95%, 0 100%);
+    border-radius: 1.3rem 1.3rem 0 0;
+}
+
+.tournament:hover .tournament__sign-up {
+    display: unset;
+    grid-area: sign-up;
+}
+
+.tournament__image {
+    grid-area: img;
+    margin-right: 1rem;
+    border-radius: 1rem 0 0 1rem;
+    width: 12rem;
+    background-size: 125%;
+    background-repeat: no-repeat;
+    background-position: center top;
+}
+
+.tournament__title {
+    grid-area: title;
+    padding-top: 1rem;
+    padding-right: 1rem;
+}
+
+.tournament__starts-at {
+    grid-area: starts-at;
+    padding: 2rem 0;
+    align-self: center;
+    justify-self: left;
+}
+
+.tournament__prize {
+    grid-area: prize;
+    justify-self: right;
+    padding-right: 1rem;
+}
+.tournament__hosted-by {
+    grid-area: host;
+    justify-self: right;
+    padding-right: 1rem;
+}
+
+.tournament__sign-up {
+    display: none;
+    grid-area: sign-up;
+    justify-self: center;
+    padding: 0.6rem 0;
+    background-color: var(--primary);
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: all 1s ease-out;
 }
