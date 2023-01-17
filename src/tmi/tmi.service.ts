@@ -23,7 +23,7 @@ export class TmiService {
   async startBot() {
     this.tmiClient.on('connected', () => {
       this.logger.log(
-        `Connected to Twitch to ${this.options.channels.length} channels`,
+        `Connected to ${this.options.channels.length} Twitch channels`,
       );
     });
 
@@ -39,11 +39,6 @@ export class TmiService {
 
     try {
       await this.tmiClient.connect();
-
-      setTimeout(() => {
-        this.tmiClient.join('ElvynCalderon');
-        this.logger.log('Connected to EC');
-      }, 2000);
     } catch (error) {
       this.logger.error(error);
     }
