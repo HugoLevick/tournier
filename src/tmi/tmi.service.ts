@@ -9,24 +9,22 @@ export class TmiService {
     this.startBot();
   }
 
-  private tmiClient = tmi.Client({
+  private options = {
     //options: { debug: true },
     identity: {
       username: process.env.BOT_USERNAME,
       password: process.env.OAUTH_TWITCH,
     },
     channels: ['h_levick'],
-  });
+  };
+
+  private tmiClient = tmi.Client(this.options);
 
   async startBot() {
-    try {
-      await this.tmiClient.connect();
-    } catch (error) {
-      console.log(error);
-    }
-
     this.tmiClient.on('connected', () => {
-      this.logger.log('Connected to Twitch');
+      this.logger.log(
+        `Connected to Twitch to ${this.options.channels.length} channels`,
+      );
     });
 
     this.tmiClient.on('message', (channel, tags, message, self) => {
@@ -35,8 +33,19 @@ export class TmiService {
 
       if (message.startsWith('!')) {
         // "@alca, heya!"
-        this.tmiClient.say(channel, `@${tags.username}, command !${message}`);
+        this.tmiClient.say(channel, `@${tags.username}, command ${message}`);
       }
     });
+
+    try {
+      await this.tmiClient.connect();
+
+      setTimeout(() => {
+        this.tmiClient.join('ElvynCalderon');
+        this.logger.log('Connected to EC');
+      }, 2000);
+    } catch (error) {
+      this.logger.error(error);
+    }
   }
 }

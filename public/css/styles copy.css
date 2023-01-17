@@ -23,17 +23,12 @@ html {
 }
 
 /*Global*/
-a,
-a:visited {
+a, a:visited {
     text-decoration: none;
     color: unset;
 }
 
-.h1,
-.h2,
-.h3,
-.h4,
-.h5 {
+.h1, .h2, .h3, .h4, .h5 {
     font-family: var(--headingFont);
     font-weight: bold;
 }
@@ -72,12 +67,4 @@ a:visited {
     justify-content: space-between;
     padding: 0 5rem;
     border-bottom: 5px black solid;
-}
-
-body {
-    display: flex;
-    text-align: center;
-    justify-content: center;
-    flex-direction: column;
-    height: 100vh;
 }
