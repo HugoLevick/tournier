@@ -43,6 +43,7 @@ export class AuthService {
   async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.userRepository.preload({
       id,
+      ...updateUserDto,
     });
 
     try {
@@ -53,6 +54,7 @@ export class AuthService {
     }
   }
 
+  //TODO: auth
   async remove(id: string) {
     const user = await this.userRepository.findOneBy({ id });
 
@@ -67,7 +69,10 @@ export class AuthService {
   }
 
   async login(loginUserDto: LoginUserDto) {
-    let email: string, twitchUsername: string, twitchId: string;
+    let email: string,
+      twitchUsername: string,
+      twitchId: string,
+      twitchProfileImageUrl: string;
     const { code } = loginUserDto;
 
     const body = {
@@ -124,6 +129,7 @@ export class AuthService {
       });
 
       email = userData[0].email;
+      twitchProfileImageUrl = userData[0].profile_image_url;
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(
@@ -133,12 +139,21 @@ export class AuthService {
     let user: User;
 
     user = await this.userRepository.findOne({
-      where: { email, isActive: true },
-      select: { id: true, email: true },
+      where: { twitchId, isActive: true },
+      select: { id: true, email: true, twitchProfileImageUrl: true },
     });
 
-    if (!user) user = await this.register({ email, twitchUsername, twitchId });
+    if (!user)
+      user = await this.register({
+        email,
+        twitchUsername,
+        twitchId,
+        twitchProfileImageUrl,
+      });
 
+    if (user.twitchProfileImageUrl !== twitchProfileImageUrl) {
+      await this.update(user.id, { twitchProfileImageUrl });
+    }
     const token = this.getJwtToken({ id: user.id });
 
     return {

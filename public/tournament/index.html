@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Normalize -->
+    <link rel="preload" href="/css/normalize.css" as="style" />
+    <link rel="stylesheet" href="/css/normalize.css" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,400;1,600&family=Inter:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/styles.css" />
+    <title>Tournier</title>
+    <!-- ADS -->
+    <script
+      async
+      custom-element="amp-ad"
+      src="https://cdn.ampproject.org/v0/amp-ad-0.1.js"
+    ></script>
+  </head>
+  <body class="text">
+    <header>
+      <nav class="nav">
+        <div>
+          <a class="h2" href="/">Tournier.xyz</a>
+        </div>
+        <div>
+          <a class="text" id="login-anchor"></a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="main-grid container-center">
+      <!-- anuncio-vertical-tournier -->
+      <amp-ad
+        class="ad1"
+        type="adsense"
+        data-ad-client="ca-pub-9721006286191735"
+        data-ad-slot="9607795076"
+        data-auto-format="rspv"
+        data-full-width="true"
+      >
+        <div overflow=""></div>
+      </amp-ad>
+      <div class="image"></div>
+      <div class="general-info">
+        <div>
+          <div class="general__title h4"></div>
+          <div class="general__host-game"></div>
+        </div>
+
+        <div class="general__squares">
+          <div class="info-squares">
+            <div class="square">
+              <div class="square__title">Prize</div>
+              <div
+                class="square__info container-center"
+                id="prize-square"
+              ></div>
+            </div>
+            <div class="square">
+              <div class="square__title">Tiers</div>
+              <div
+                class="square__info container-center"
+                id="tiers-square"
+              ></div>
+            </div>
+            <div class="square">
+              <div class="square__title">Starts At</div>
+              <div class="square__info container-center" id="time-square"></div>
+            </div>
+          </div>
+          <div>
+            <button class="sign-up-button">Sign Up</button>
+          </div>
+        </div>
+      </div>
+      <div class="side-options">
+        <div
+          class="tournament_people container-center active"
+          onclick="showPeople()"
+        >
+          PEOPLE
+        </div>
+        <div class="tournament_teams container-center" onclick="showTeams()">
+          TEAMS
+        </div>
+        <div class="tournament_info container-center" onclick="showInfo()">
+          INFO
+        </div>
+      </div>
+      <div class="main-content">
+        <input class="people-search-bar" placeholder="Search..." />
+        <div class="people-table">
+          <div class="people-trow h5">
+            <div class="container-center">Username</div>
+            <div class="container-center">Tier</div>
+            <div class="container-center">Gamertag</div>
+          </div>
+          <div class="people-trow">
+            <div class="container-center">h_levick</div>
+            <div class="container-center">1</div>
+            <div class="container-center">switch god</div>
+          </div>
+        </div>
+      </div>
+      <amp-ad
+        class="ad2"
+        type="adsense"
+        data-ad-client="ca-pub-9721006286191735"
+        data-ad-slot="9607795076"
+        data-auto-format="rspv"
+        data-full-width="true"
+      >
+        <div overflow=""></div>
+      </amp-ad>
+    </main>
+  </body>
+  <script src="/js/getUserByJwt.js"></script>
+  <script src="/js/display-one-tourney.js"></script>
+</html>

@@ -40,6 +40,13 @@ export class User {
   twitchId: string;
 
   @Column('text', {
+    nullable: false,
+    default:
+      'https://static-cdn.jtvnw.net/user-default-pictures-uv/de130ab0-def7-11e9-b668-784f43822e80-profile_image-300x300.png',
+  })
+  twitchProfileImageUrl: string;
+
+  @Column('text', {
     array: true,
     default: [UserRoles.user],
     select: false,
@@ -60,6 +67,6 @@ export class User {
   @BeforeInsert()
   @BeforeUpdate()
   checkEmail() {
-    this.email = this.email.toLowerCase();
+    if (this.email) this.email = this.email.toLowerCase();
   }
 }

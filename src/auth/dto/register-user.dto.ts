@@ -9,4 +9,7 @@ export class RegisterUserDto {
 
   @IsString()
   twitchId: string;
+
+  @IsString()
+  twitchProfileImageUrl: string;
 }

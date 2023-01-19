@@ -3,8 +3,10 @@
     --textFont: 'Inter', sans-serif;
 
     --background: rgb(45, 45, 45);
+    --background-secondary: rgb(67, 67, 67);
+    --darker-background: rgb(29, 29, 29);
     --primary: rgb(174, 122, 8);
-    --secondary: #E1E1E1;
+    --secondary: #9e9e9e;
 }
 
 html {
@@ -14,6 +16,13 @@ html {
     font-size: 62.5%;
     background-color: var(--background);
 }
+
+body {
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
 
 *,
 *:before,
@@ -63,6 +72,12 @@ a:visited {
     font-weight: 500;
 }
 
+.container-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Nav */
 
 .nav {
@@ -79,7 +94,6 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
-
 }
 
 /* Tournament grid */
@@ -97,19 +111,21 @@ main {
 
 .tournament {
     display: grid;
+    grid-template-columns: 1fr 2fr 1fr 2fr;
     grid-template-areas: 
     "img title title title"
-    "img starts-at starts-at prize"
+    "img people people prize"
     "img starts-at starts-at host";
     text-align: justify;
     border: 3px solid var(--primary);
     border-radius: 1.3rem;
+    min-height: 15rem;
 }
 
 .tournament:hover {
     grid-template-areas:
     "img title title title"
-    "img starts-at starts-at prize"
+    "img people people prize"
     "img starts-at starts-at host"
     "sign-up sign-up sign-up sign-up";
     clip-path: polygon(0 0, 100% 0%, 100% 95%, 0 100%);
@@ -123,23 +139,21 @@ main {
 
 .tournament__image {
     grid-area: img;
-    margin-right: 1rem;
     border-radius: 1rem 0 0 1rem;
-    width: 12rem;
-    background-size: 125%;
+    height: 100%;
+    background-size: cover;
     background-repeat: no-repeat;
     background-position: center top;
 }
 
 .tournament__title {
     grid-area: title;
-    padding-top: 1rem;
-    padding-right: 1rem;
+    padding: 1rem;
 }
 
 .tournament__starts-at {
     grid-area: starts-at;
-    padding: 2rem 0;
+    padding: 1rem;
     align-self: center;
     justify-self: left;
 }
@@ -147,12 +161,21 @@ main {
 .tournament__prize {
     grid-area: prize;
     justify-self: right;
-    padding-right: 1rem;
+    align-self: center;
+    padding: 1rem;
 }
 .tournament__hosted-by {
     grid-area: host;
     justify-self: right;
-    padding-right: 1rem;
+    align-self: center;
+    padding: 1rem;
+}
+
+.tournament__people {
+    grid-area: people;
+    padding: 1rem 1rem 0 1rem;
+    align-self: center;
+    justify-self: left;
 }
 
 .tournament__sign-up {
@@ -165,4 +188,176 @@ main {
     height: 100%;
     text-align: center;
     transition: all 1s ease-out;
+}
+
+/* ONE TOURNEY */
+
+.main-grid {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr 4fr 1fr;
+    grid-template-rows: 1fr 5fr;
+    grid-template-areas:
+    "ad1 img info ad2"
+    "ad1 opt main ad2";
+    width: 100%;
+    max-width: 1440px;
+    max-height: 90vh;
+    align-self: center;
+    height: calc(100%-2rem);
+}
+
+.main-grid > * {
+    background-color: var(--darker-background);
+}
+
+.image {
+    grid-area: img;
+    height: unset;
+    aspect-ratio: 1/1;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center top;
+    background-image: url('https://m.media-amazon.com/images/M/MV5BMDA5ZDIzNzctYzY0OC00MDY1LWI4NGItODBkNDMxNWZhNTA0XkEyXkFqcGdeQXVyMTk5NDI0MA@@._V1_FMjpg_UX1000_.jpg');
+}
+
+@media (max-width: 1024px) {
+    .image {
+        aspect-ratio: unset;
+        height: 100%;
+    }
+}
+
+.general-info {
+    grid-area: info;
+    height: 100%;
+    padding: 0.7rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.general__title {
+    max-height: 8.5rem;
+    overflow: auto;
+}
+
+.general__host-game {
+    font-size: 1.7rem;
+    color: var(--secondary);
+}
+
+.general__host-game > a:hover{
+    text-decoration: underline;
+}
+
+.general__squares {
+    margin: 0 0 2rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.info-squares {
+    display: flex;
+    gap: 2rem;
+}
+
+.square {
+    border: 2px var(--background-secondary) solid;
+    background-color: var(--background-secondary);
+    display: flex;
+    flex-direction: column;
+}
+
+.square > * {
+    padding: 0.2rem 0.5rem;
+}
+
+.square__title {
+    font-size: 1.6rem;
+    background-color: var(--background);
+}
+
+.square__info {
+    font-size: 1.6rem;
+}
+
+.sign-up-button {
+    border: unset;
+    color: white;
+    font-weight: bold;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    padding: 1rem 1.5rem;
+    background-color: var(--primary);
+}
+
+.sign-up-button:disabled {
+    background-color: purple;
+}
+
+.side-options {
+    margin-top: 2rem;
+    align-self: flex-start;
+}
+
+.side-options > * {
+    height: 12rem;
+    cursor: pointer;
+
+    font-weight: bold;
+    transition: all 0.5s ease-out;
+}
+
+.side-options > *:last-child {
+    border: none;
+}
+
+.side-options > *.active {
+    text-decoration: underline;
+    text-decoration-color: var(--primary);
+    font-size: 3rem;
+}
+
+.side-options>*:hover {
+    font-size: 3rem;
+}
+
+.main-content {
+    grid-area: main;
+    margin-top: 2rem;
+    align-self: flex-start;
+    height: 50vh;
+    border-left: 3px var(--primary) solid;
+}
+
+.people-search-bar {
+    width: 100%;
+    height: 3.5rem;
+    background-color: var(--background);
+    border: none;
+    color: white;
+}
+
+.people-table {
+    display: grid;
+    gap: 1rem;
+}
+
+.people-table > *:first-child{
+    background-color: var(--background);
+}
+
+.people-trow {
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr;
+}
+
+.ad1 {
+    grid-area: ad1;
+}
+
+.ad2 {
+    grid-area: ad2;
 }

@@ -22,6 +22,7 @@ async function getUserByJwt() {
 
   if (!user) {
     loginAnchor.href = `https://id.twitch.tv/oauth2/authorize?client_id=cygujur0ps52ov7fguxb8tix06wa7z&redirect_uri=${location.origin}/auth/twitch-oauth.html&response_type=code&scope=user:read:email`;
+    loginAnchor.innerHTML = 'Login with Twitch';
   }
 
   console.log({ user });

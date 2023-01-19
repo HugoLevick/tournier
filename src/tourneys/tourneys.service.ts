@@ -143,6 +143,8 @@ export class TourneysService {
 
   private handleDBError(error: any) {
     if (error.code == '23505') throw new BadRequestException(error.detail);
+    if (error.response?.statusCode === 400)
+      throw new BadRequestException(error.response?.message);
     else {
       console.log(error);
       throw new InternalServerErrorException('Something unexpected happened');
