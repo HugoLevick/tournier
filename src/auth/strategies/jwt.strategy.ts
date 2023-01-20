@@ -32,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         twitchUsername: true,
         email: true,
         isActive: true,
-        roles: true,
+        role: true,
       },
     });
 

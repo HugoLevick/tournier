@@ -7,8 +7,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
-import { User, UserRoles } from '../../entities/user.entity';
-import { META_ROLES } from '../../decorators/auth.decorator';
+import { User, UserRoles } from '../entities/user.entity';
+import { META_ROLES } from '../decorators/auth.decorator';
+import { UnauthorizedException } from '@nestjs/common';
 
 @Injectable()
 export class UserRoleGuard implements CanActivate {
@@ -25,11 +26,12 @@ export class UserRoleGuard implements CanActivate {
     const user: User = req.user;
 
     if (!user) throw new BadRequestException('User not found');
-    if (!validRoles || validRoles.length === 0 || user.roles.includes(UserRoles.admin)) return true;
+    
+    if(!user.email) throw new UnauthorizedException('User not registered')
 
-    for (const role of user.roles) {
-      if (validRoles.includes(role)) return true;
-    }
+    if (!validRoles || validRoles.length === 0 || user.role === UserRoles.owner) return true;
+
+    if (validRoles.includes(user.role)) return true;
 
     throw new ForbiddenException(
       `User ${user.twitchUsername} needs a valid role: [${validRoles}]`,

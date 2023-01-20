@@ -2,12 +2,12 @@
   let params = new URL(document.location).searchParams;
   const code = params.get('code');
   const error = params.get('error');
-  let token;
+  let token, redirecting;
+
   if (error) {
     window.location = '/?error=Authentication canceled';
   }
 
-  console.log(JSON.stringify({ code }));
   async function getToken() {
     try {
       token = await fetch('/api/auth/login', {
@@ -16,18 +16,21 @@
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ code }),
-      })
-        .then((response) => {
-          if (response.status !== 201)
-            window.location = '/?error=Authentication failed';
-          else return response.json();
-        })
-        .then((object) => object.token);
+      }).then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          redirecting = true;
+          console.log(1);
+          window.location = `/?error=Authentication failed (${data.message})`;
+        } else return data.token;
+      });
 
-      await localStorage.setItem('JWT', token);
-      window.location = '/';
+      if (!redirecting) {
+        if (token) await localStorage.setItem('JWT', token);
+        window.location = '/';
+      }
     } catch (error) {
-      window.location = '/?error=Authentication failed';
+      window.location = '/?error=Authentication failed (App error)';
     }
   }
 

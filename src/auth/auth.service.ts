@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,17 +14,30 @@ import { LoginUserDto } from './dto/login-user-dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { UnauthorizedException } from '@nestjs/common';
+import { CommonService } from '../common/common.service';
+import { TwitchBodyRequest } from '../auth/interfaces/twitch-body-request.interface';
 
 @Injectable()
 export class AuthService {
+  private logger = new Logger('AuthService');
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly commonService: CommonService,
   ) {}
+
+  async findOne(term: string) {
+    const findOneQuery = this.userRepository.createQueryBuilder();
+
+    return await findOneQuery
+      .where('User.twitchId=:term OR User.twitchUsername=:term', { term })
+      .getOne();
+  }
 
   async register(registerUserDto: RegisterUserDto) {
     try {
@@ -37,6 +51,96 @@ export class AuthService {
     } catch (error) {
       this.handleDBErrors(error);
     }
+  }
+
+  async login(loginUserDto: LoginUserDto) {
+    let email: string,
+      twitchUsername: string,
+      twitchId: string,
+      twitchProfileImageUrl: string;
+    const { code } = loginUserDto;
+
+    const body: TwitchBodyRequest = {
+      client_id: this.configService.get('TWITCH_CLIENT_ID'),
+      client_secret: this.configService.get('TWITCH_SECRET'),
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: `${this.configService.get('HOST')}${this.configService.get(
+        'REDIRECT_URI',
+      )}`,
+    };
+
+    //* Get own token
+    // body = {
+    //   client_id: this.configService.get('TWITCH_CLIENT_ID'),
+    //   client_secret: this.configService.get('TWITCH_SECRET'),
+    //   grant_type: 'client_credentials',
+    // };
+
+    //Encode body
+    const encodedBody = this.encodeBody(body);
+
+    const tokenData = await this.getTwitchTokenData(encodedBody);
+
+    if (!tokenData) throw new UnauthorizedException('Authentication denied');
+
+    const token: string = tokenData.access_token;
+
+    const validateData = await this.getValidateData(token);
+
+    twitchUsername = validateData.login;
+    twitchId = validateData.user_id;
+
+    const userFetchData = await this.getUserData(twitchId, token);
+
+    let userData: any;
+
+    if (!userFetchData.data[0]) {
+      throw new BadRequestException('User not found on twitch');
+    } else userData = userFetchData.data[0];
+
+    email = userData.email;
+
+    twitchProfileImageUrl = userData.profile_image_url;
+
+    if (!twitchId) {
+      this.logger.error('Couldnt find twitch id');
+      throw new InternalServerErrorException('Something unexpected happened');
+    }
+
+    let user: User;
+    user = await this.userRepository.findOne({
+      where: { twitchId, isActive: true },
+      select: { id: true, email: true, twitchProfileImageUrl: true },
+    });
+
+    if (!user)
+      user = await this.register({
+        email,
+        twitchUsername,
+        twitchId,
+        twitchProfileImageUrl,
+      });
+
+    if (user.twitchProfileImageUrl !== twitchProfileImageUrl) {
+      await this.update(user.id, { twitchProfileImageUrl });
+    }
+
+    if (user.twitchUsername !== twitchUsername) {
+      await this.update(user.id, { twitchUsername });
+    }
+
+    if (!user.email && email) {
+      await this.update(user.id, { email });
+    } else if (!user.email && !email) {
+      throw new UnauthorizedException('User not registered');
+    }
+
+    if (code)
+      return {
+        token: this.getJwToken({ id: user.id }),
+      };
+    else return {};
   }
 
   //TODO: Only admins can update roles, twitchusername, isactive
@@ -68,44 +172,31 @@ export class AuthService {
     };
   }
 
-  async login(loginUserDto: LoginUserDto) {
-    let email: string,
-      twitchUsername: string,
-      twitchId: string,
-      twitchProfileImageUrl: string;
-    const { code } = loginUserDto;
-
-    const body = {
-      client_id: this.configService.get('TWITCH_CLIENT_ID'),
-      client_secret: this.configService.get('TWITCH_SECRET'),
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: `${this.configService.get('HOST')}${this.configService.get(
-        'REDIRECT_URI',
-      )}`,
-    };
-
-    //Encode body
+  encodeBody(body: TwitchBodyRequest): string {
     let formBody = [];
     for (let property in body) {
       let encodedKey = encodeURIComponent(property);
       let encodedValue = encodeURIComponent(body[property]);
       formBody.push(encodedKey + '=' + encodedValue);
     }
-    const encodedBody = formBody.join('&');
+    return formBody.join('&');
+  }
 
+  async getTwitchTokenData(encodedBody: string) {
     try {
       //Fetch Access Token
       const { data: tokenData } = await axios.post(
         'https://id.twitch.tv/oauth2/token',
         encodedBody,
       );
+      return tokenData;
+    } catch (error) {
+      this.commonService.handleAxiosError(error);
+    }
+  }
 
-      if (!tokenData) throw new UnauthorizedException('Authentication denied');
-
-      const token = tokenData.access_token;
-
-      //Fetch usename
+  async getValidateData(token: string) {
+    try {
       const { data: validateData } = await axios.get(
         'https://id.twitch.tv/oauth2/validate',
         {
@@ -114,54 +205,45 @@ export class AuthService {
           },
         },
       );
-
-      twitchUsername = validateData.login;
-      twitchId = validateData.user_id;
-
-      //Fetch user email
-      const {
-        data: { data: userData },
-      } = await axios.get('https://api.twitch.tv/helix/users?id=' + twitchId, {
-        headers: {
-          Authorization: 'Bearer ' + token,
-          'Client-Id': this.configService.get('TWITCH_CLIENT_ID'),
-        },
-      });
-
-      email = userData[0].email;
-      twitchProfileImageUrl = userData[0].profile_image_url;
+      return validateData;
     } catch (error) {
-      console.log(error);
-      throw new InternalServerErrorException(
-        'Something went wrong on our side... Try again later or report it to tournierbot@gmail.com',
-      );
+      this.commonService.handleAxiosError(error);
     }
-    let user: User;
-
-    user = await this.userRepository.findOne({
-      where: { twitchId, isActive: true },
-      select: { id: true, email: true, twitchProfileImageUrl: true },
-    });
-
-    if (!user)
-      user = await this.register({
-        email,
-        twitchUsername,
-        twitchId,
-        twitchProfileImageUrl,
-      });
-
-    if (user.twitchProfileImageUrl !== twitchProfileImageUrl) {
-      await this.update(user.id, { twitchProfileImageUrl });
-    }
-    const token = this.getJwtToken({ id: user.id });
-
-    return {
-      token,
-    };
   }
 
-  private getJwtToken(payload: JwtPayload) {
+  async getUserData(twitchId: string, token: string, twitchUsername?: string) {
+    try {
+      let userFetchData: AxiosResponse;
+      if (twitchId) {
+        //Fetch user email
+        userFetchData = await axios.get(
+          'https://api.twitch.tv/helix/users?id=' + twitchId,
+          {
+            headers: {
+              Authorization: 'Bearer ' + token,
+              'Client-Id': this.configService.get('TWITCH_CLIENT_ID'),
+            },
+          },
+        );
+      } else if (twitchUsername) {
+        userFetchData = await axios.get(
+          'https://api.twitch.tv/helix/users?login=' + twitchUsername,
+          {
+            headers: {
+              Authorization: 'Bearer ' + token,
+              'Client-Id': this.configService.get('TWITCH_CLIENT_ID'),
+            },
+          },
+        );
+      }
+
+      return userFetchData.data;
+    } catch (error) {
+      this.commonService.handleAxiosError(error);
+    }
+  }
+
+  private getJwToken(payload: JwtPayload) {
     const token = this.jwtService.sign(payload);
     return token;
   }

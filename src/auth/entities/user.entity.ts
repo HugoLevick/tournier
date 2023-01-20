@@ -1,4 +1,5 @@
 import { Tourney } from '../../tourneys/entities/tourney.entity';
+import { TourneysToUsers } from '../../tourneys/entities/tourneys_people_users.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
@@ -21,7 +22,7 @@ export class User {
   id: string;
 
   @Column('text', {
-    nullable: false,
+    nullable: true,
     unique: true,
     select: false,
   })
@@ -36,6 +37,7 @@ export class User {
   @Column('text', {
     nullable: false,
     unique: true,
+    select: false,
   })
   twitchId: string;
 
@@ -46,12 +48,12 @@ export class User {
   })
   twitchProfileImageUrl: string;
 
-  @Column('text', {
-    array: true,
-    default: [UserRoles.user],
+  @Column('enum', {
+    enum: UserRoles,
+    default: UserRoles.user,
     select: false,
   })
-  roles: UserRoles[];
+  role: UserRoles;
 
   @Column('bool', {
     default: true,
@@ -62,7 +64,12 @@ export class User {
   @OneToMany(() => Tourney, (tourney) => tourney.creator, {
     cascade: true,
   })
-  tourneysHosted?: Tourney[];
+  tourneysHosted: Tourney[];
+
+  @OneToMany(() => TourneysToUsers, (people) => people.user, {
+    cascade: true,
+  })
+  tourneysJoined: TourneysToUsers[];
 
   @BeforeInsert()
   @BeforeUpdate()

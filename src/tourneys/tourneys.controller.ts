@@ -16,6 +16,7 @@ import { Auth } from 'src/auth/decorators/auth.decorator';
 import { User, UserRoles } from 'src/auth/entities/user.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { TourneyPersonDto } from './dto/tourney-person.dto';
 
 @Controller('tourneys')
 export class TourneysController {
@@ -51,5 +52,33 @@ export class TourneysController {
   @Delete(':term')
   remove(@Param('term') term: string, @GetUser() user: User) {
     return this.tourneysService.remove(term, user);
+  }
+
+  @Auth()
+  @Post(':term/people')
+  addPerson(@Param('term') term: string, @GetUser() user: User) {
+    return this.tourneysService.addPerson(term, user);
+  }
+
+  @Auth(UserRoles.admin, UserRoles.creator)
+  @Post(':term/people-admin')
+  addPersonAdmin(
+    @Param('term') term: string,
+    @GetUser() user: User,
+    @Body() addPersonDto: TourneyPersonDto,
+  ) {
+    return this.tourneysService.addPersonAdmin(term, addPersonDto, user);
+  }
+
+  @Auth()
+  @Delete()
+  removePerson(@Param('term') term: string, @GetUser() user: User) {
+    return this.tourneysService.removePerson(term, user);
+  }
+
+  @Auth()
+  @Delete()
+  removePersonAdmin(@Param('term') term: string, @GetUser() user: User) {
+    return this.tourneysService.removePerson(term, user);
   }
 }

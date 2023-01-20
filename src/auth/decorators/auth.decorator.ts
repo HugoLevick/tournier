@@ -1,6 +1,6 @@
 import { applyDecorators, SetMetadata, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { UserRoleGuard } from '../guards/user-role/user-role.guard';
+import { UserRoleGuard } from '../guards/user-role.guard';
 import { UserRoles } from '../entities/user.entity';
 
 export const META_ROLES = 'roles';

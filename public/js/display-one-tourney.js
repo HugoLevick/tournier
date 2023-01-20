@@ -8,6 +8,15 @@ const prizeLbl = document.getElementById('prize-square');
 const tiersLbl = document.getElementById('tiers-square');
 const startsAt = document.getElementById('time-square');
 const signUpButton = document.querySelector('.sign-up-button');
+const peopleTable = document.querySelector('.player-table');
+const playerTablePH = `
+          <div
+            id="player-table-placeholder"
+            class="container-center"
+            style="opacity: 60%"
+          >
+            Looks like no one is here... yet 👀
+          </div>`;
 
 async function getOneTourney(term) {
   const response = await fetch('/api/tourneys/' + term, {
@@ -43,9 +52,20 @@ async function getOneTourney(term) {
     },
   );
 
-  if (!user) {
-    signUpButton.disabled = true;
-    signUpButton.innerHTML = 'Log in';
+  for (player of tourney.people) {
+    const playerHtml = `
+      <div class="player-trow">
+        <div class="container-center">${player.user.twitchUsername}</div>
+        <div class="container-center">${
+          tourney.tiered ? player.tier : 'N/A'
+        }</div>
+        <div class="container-center">Coming soon</div>
+      </div>
+    `;
+
+    peopleTable.innerHTML += playerHtml;
   }
+
+  if (!tourney.people) peopleTable.innerHTML += playerTablePH;
 }
 getOneTourney(term);

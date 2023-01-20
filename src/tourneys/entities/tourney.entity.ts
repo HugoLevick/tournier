@@ -1,13 +1,14 @@
 import { User } from '../../auth/entities/user.entity';
 import { BadRequestException } from '@nestjs/common';
+import { TourneysToUsers } from './tourneys_people_users.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
   Column,
   Entity,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
-  Timestamp,
 } from 'typeorm';
 
 export enum TourneyStatus {
@@ -86,6 +87,11 @@ export class Tourney {
     eager: true,
   })
   creator: User;
+
+  @OneToMany(() => TourneysToUsers, (people) => people.tourney, {
+    cascade: true,
+  })
+  people: TourneysToUsers[];
 
   @BeforeInsert()
   @BeforeUpdate()
