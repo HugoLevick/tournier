@@ -1,4 +1,5 @@
 let params = new URL(document.location).searchParams;
+let tourney;
 const term = params.get('term').toLowerCase();
 if (!term) window.location = '/';
 
@@ -28,7 +29,7 @@ async function getOneTourney(term) {
     window.location = '/';
   }
 
-  const tourney = await response.json();
+  tourney = await response.json();
   const host = tourney.creator.twitchUsername;
   console.log(tourney);
   titleLbl.innerHTML = tourney.name;
@@ -69,4 +70,21 @@ async function getOneTourney(term) {
 
   if (tourney.signUps.length === 0) peopleTable.innerHTML += playerTablePH;
 }
+
+async function signUp() {
+  let response = await fetch(`/api/tourneys/${tourney.id}/signup`, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + jwt,
+    },
+  });
+
+  if (response.ok) {
+    swal.fire('You joined the tourney!', '', 'success');
+  } else {
+    response = await response.json();
+    swal.fire('Whoops!', response.message, 'error');
+  }
+}
+
 getOneTourney(term);

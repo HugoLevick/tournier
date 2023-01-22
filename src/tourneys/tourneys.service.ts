@@ -183,23 +183,25 @@ export class TourneysService {
 
     const invitedPeopleQB = this.tourneyInvitesRepository.createQueryBuilder();
 
-    const invitedPeople = await invitedPeopleQB
-      .leftJoinAndSelect('TourneyInvites.toUser', 'toUser')
-      .leftJoinAndSelect('TourneyInvites.fromTeam', 'fromTeam')
-      .leftJoinAndSelect('fromTeam.captain', 'teamCaptain')
-      .where(
-        'teamCaptain.id=:userId AND toUser.twitchUsername IN(:...members)',
-        {
-          userId: user.id,
-          members: tourneySignUpDto.members,
-        },
-      )
-      .getMany();
+    if (tourney.peoplePerTeam > 1) {
+      const invitedPeople = await invitedPeopleQB
+        .leftJoinAndSelect('TourneyInvites.toUser', 'toUser')
+        .leftJoinAndSelect('TourneyInvites.fromTeam', 'fromTeam')
+        .leftJoinAndSelect('fromTeam.captain', 'teamCaptain')
+        .where(
+          'teamCaptain.id=:userId AND toUser.twitchUsername IN(:...members)',
+          {
+            userId: user.id,
+            members: tourneySignUpDto.members,
+          },
+        )
+        .getMany();
 
-    if (invitedPeople.length !== 0) {
-      throw new BadRequestException(
-        `Player '${invitedPeople[0].toUser.twitchUsername}' already has a pending invite from you`,
-      );
+      if (invitedPeople.length !== 0) {
+        throw new BadRequestException(
+          `Player '${invitedPeople[0].toUser.twitchUsername}' already has a pending invite from you`,
+        );
+      }
     }
 
     delete user.role;
@@ -245,6 +247,7 @@ export class TourneysService {
       tourney,
       captain: user,
       invited: [],
+      verifiedInvites: tourney.peoplePerTeam === 1 ? true : false,
     });
 
     for (const member of members) {
