@@ -52,20 +52,21 @@ async function getOneTourney(term) {
     },
   );
 
-  for (player of tourney.people) {
-    const playerHtml = `
-      <div class="player-trow">
-        <div class="container-center">${player.user.twitchUsername}</div>
+  for (const team of tourney.signUps) {
+    for (const player of team.members) {
+      const playerHtml = `
+      <div class="player-trow" id="${player.id}">
+        <div class="container-center">${player.twitchUsername}</div>
         <div class="container-center">${
-          tourney.tiered ? player.tier : 'N/A'
+          tourney.tiered ? team.tier : 'N/A'
         }</div>
         <div class="container-center">Coming soon</div>
       </div>
     `;
-
-    peopleTable.innerHTML += playerHtml;
+      peopleTable.innerHTML += playerHtml;
+    }
   }
 
-  if (!tourney.people) peopleTable.innerHTML += playerTablePH;
+  if (tourney.signUps.length === 0) peopleTable.innerHTML += playerTablePH;
 }
 getOneTourney(term);

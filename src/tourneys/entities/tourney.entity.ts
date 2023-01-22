@@ -1,6 +1,6 @@
 import { User } from '../../auth/entities/user.entity';
 import { BadRequestException } from '@nestjs/common';
-import { TourneysToUsers } from './tourneys_people_users.entity';
+import { TourneysTeams } from 'src/tourneys/entities/tourneys_teams.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
@@ -88,10 +88,10 @@ export class Tourney {
   })
   creator: User;
 
-  @OneToMany(() => TourneysToUsers, (people) => people.tourney, {
+  @OneToMany(() => TourneysTeams, (people) => people.tourney, {
     cascade: true,
   })
-  people: TourneysToUsers[];
+  signUps: TourneysTeams[];
 
   @BeforeInsert()
   @BeforeUpdate()

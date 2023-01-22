@@ -143,6 +143,41 @@ export class AuthService {
     else return {};
   }
 
+  async findOneTwitchAndRegister(twitchUsername: string) {
+    //* Get own token
+    const body = {
+      client_id: this.configService.get('TWITCH_CLIENT_ID'),
+      client_secret: this.configService.get('TWITCH_SECRET'),
+      grant_type: 'client_credentials',
+    };
+
+    //Encode body
+    const encodedBody = this.encodeBody(body);
+
+    const tokenData = await this.getTwitchTokenData(encodedBody);
+    if (!tokenData)
+      throw new UnauthorizedException('Twitch authentication denied');
+    const token: string = tokenData.access_token;
+
+    const userFetchData = await this.getUserData(
+      undefined,
+      token,
+      twitchUsername,
+    );
+
+    let userData: any;
+
+    if (!userFetchData.data[0]) {
+      throw new BadRequestException(
+        `User '${twitchUsername}' not found on twitch`,
+      );
+    } else userData = userFetchData.data[0];
+
+    const twitchId = userData.id;
+    const twitchProfileImageUrl = userData.profile_image_url;
+
+    return this.register({ twitchId, twitchUsername, twitchProfileImageUrl });
+  }
   //TODO: Only admins can update roles, twitchusername, isactive
   async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.userRepository.preload({

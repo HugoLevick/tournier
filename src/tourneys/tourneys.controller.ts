@@ -8,6 +8,7 @@ import {
   Delete,
   ParseUUIDPipe,
   Query,
+  Put,
 } from '@nestjs/common';
 import { TourneysService } from './tourneys.service';
 import { CreateTourneyDto } from './dto/create-tourney.dto';
@@ -17,6 +18,8 @@ import { User, UserRoles } from 'src/auth/entities/user.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { TourneyPersonDto } from './dto/tourney-person.dto';
+import { TourneySignUpDto } from './dto/tourney-signup.dto';
+import { InviteResponseDto } from './dto/invite-response.dto';
 
 @Controller('tourneys')
 export class TourneysController {
@@ -55,30 +58,47 @@ export class TourneysController {
   }
 
   @Auth()
-  @Post(':term/people')
-  addPerson(@Param('term') term: string, @GetUser() user: User) {
-    return this.tourneysService.addPerson(term, user);
+  @Post(':term/signup')
+  addPerson(
+    @Param('term') term: string,
+    @Body() tourneySignUpDto: TourneySignUpDto,
+    @GetUser() user: User,
+  ) {
+    return this.tourneysService.signUp(term, tourneySignUpDto, user);
   }
 
   @Auth(UserRoles.admin, UserRoles.creator)
-  @Post(':term/people-admin')
+  @Post(':term/signup-admin')
   addPersonAdmin(
     @Param('term') term: string,
     @GetUser() user: User,
-    @Body() addPersonDto: TourneyPersonDto,
+    @Body() tourneySignUpDto: TourneySignUpDto,
   ) {
-    return this.tourneysService.addPersonAdmin(term, addPersonDto, user);
+    return this.tourneysService.signUpAdmin(term, tourneySignUpDto, user);
   }
 
   @Auth()
-  @Delete()
-  removePerson(@Param('term') term: string, @GetUser() user: User) {
-    return this.tourneysService.removePerson(term, user);
+  @Delete(':term/signout')
+  signOut(@Param('term') term: string, @GetUser() user: User) {
+    return this.tourneysService.signOut(term, user);
   }
 
   @Auth()
-  @Delete()
-  removePersonAdmin(@Param('term') term: string, @GetUser() user: User) {
-    return this.tourneysService.removePerson(term, user);
+  @Delete(':term/signout-admin')
+  removePersonAdmin(
+    @Param('term') term: string,
+    @GetUser() user: User,
+    @Body() tourneyPersonDto: TourneyPersonDto,
+  ) {
+    return this.tourneysService.signOutAdmin(term, user, tourneyPersonDto);
+  }
+
+  @Auth()
+  @Put(':term/invite')
+  inviteResponse(
+    @Body() inviteResponseDto: InviteResponseDto,
+    @GetUser() user: User,
+  ) {
+    return this.tourneysService.inviteResponse(inviteResponseDto, user);
   }
 }

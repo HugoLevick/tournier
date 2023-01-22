@@ -30,6 +30,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       select: {
         id: true,
         twitchUsername: true,
+        twitchId: true,
+        twitchProfileImageUrl: true,
         email: true,
         isActive: true,
         role: true,

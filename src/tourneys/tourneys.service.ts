@@ -4,6 +4,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,21 +13,22 @@ import { UpdateTourneyDto } from './dto/update-tourney.dto';
 import { Tourney } from './entities/tourney.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User, UserRoles } from 'src/auth/entities/user.entity';
-import { UnauthorizedException } from '@nestjs/common';
 import { TourneyPersonDto } from './dto/tourney-person.dto';
 import { AuthService } from '../auth/auth.service';
-import { ConfigService } from '@nestjs/config';
-import { TwitchBodyRequest } from '../auth/interfaces/twitch-body-request.interface';
-import { TourneysToUsers } from './entities/tourneys_people_users.entity';
+import { TourneysTeams } from 'src/tourneys/entities/tourneys_teams.entity';
+import { TourneySignUpDto } from './dto/tourney-signup.dto';
+import { TourneyInvites } from './entities/tourney-invites.entity';
+import { InviteResponseDto } from './dto/invite-response.dto';
 
 @Injectable()
 export class TourneysService {
   constructor(
     @InjectRepository(Tourney)
     private readonly tourneyRepository: Repository<Tourney>,
-    @InjectRepository(TourneysToUsers)
-    private readonly tourneyToUsersRepository: Repository<TourneysToUsers>,
-    private readonly configService: ConfigService,
+    @InjectRepository(TourneysTeams)
+    private readonly tourneysTeamsRepository: Repository<TourneysTeams>,
+    @InjectRepository(TourneyInvites)
+    private readonly tourneyInvitesRepository: Repository<TourneyInvites>,
     private readonly authService: AuthService,
   ) {}
 
@@ -68,8 +70,9 @@ export class TourneysService {
 
       tourney = await queryBuilder
         .leftJoinAndSelect('Tourney.creator', 'creator')
-        .leftJoinAndSelect('Tourney.people', 'people')
-        .leftJoinAndSelect('people.user', 'userId')
+        .leftJoinAndSelect('Tourney.signUps', 'signUps')
+        .leftJoinAndSelect('signUps.captain', 'captain')
+        .leftJoinAndSelect('signUps.members', 'members')
         .getOne();
     } catch (error) {
       this.handleDBError(error);
@@ -144,90 +147,181 @@ export class TourneysService {
     }
   }
 
-  async addPerson(term: string, user: User, tier: number = 0) {
-    const tourney = await this.findOne(term);
+  async signUp(
+    term: string,
+    tourneySignUpDto: TourneySignUpDto,
+    user: User,
+    tier: number = 0,
+    tourney?: Tourney,
+  ) {
+    if (!tourney) tourney = await this.findOne(term);
 
-    if (tourney.people.find((playerInfo) => playerInfo.user.id === user.id))
-      throw new BadRequestException('Player is already in tourney');
+    if (tourneySignUpDto.members.length !== tourney.peoplePerTeam - 1)
+      throw new BadRequestException(
+        `Team has to have ${tourney.peoplePerTeam} members including the person signing up`,
+      );
 
-    const relation = this.tourneyToUsersRepository.create({
-      user,
-      tourney,
-      tier,
+    const checkInTourneyTeamQB =
+      this.tourneysTeamsRepository.createQueryBuilder();
+
+    const inTeams = await checkInTourneyTeamQB
+      .select(['TourneysTeams'])
+      .leftJoinAndSelect('TourneysTeams.members', 'Members')
+      .where(
+        'TourneysTeams.tourneyId=:tourneyId AND TourneysTeams.verifiedInvites=true AND Members.twitchUsername IN(:...members)',
+        {
+          tourneyId: tourney.id,
+          members: [user.twitchUsername, ...tourneySignUpDto.members],
+        },
+      )
+      .getRawMany();
+
+    if (inTeams.length !== 0)
+      throw new BadRequestException(
+        `Player ${inTeams[0].Members_twitchUsername} is already in a team`,
+      );
+
+    const invitedPeopleQB = this.tourneyInvitesRepository.createQueryBuilder();
+
+    const invitedPeople = await invitedPeopleQB
+      .leftJoinAndSelect('TourneyInvites.toUser', 'toUser')
+      .leftJoinAndSelect('TourneyInvites.fromTeam', 'fromTeam')
+      .leftJoinAndSelect('fromTeam.captain', 'teamCaptain')
+      .where(
+        'teamCaptain.id=:userId AND toUser.twitchUsername IN(:...members)',
+        {
+          userId: user.id,
+          members: tourneySignUpDto.members,
+        },
+      )
+      .getMany();
+
+    if (invitedPeople.length !== 0) {
+      throw new BadRequestException(
+        `Player '${invitedPeople[0].toUser.twitchUsername}' already has a pending invite from you`,
+      );
+    }
+
+    delete user.role;
+    delete user.isActive;
+    delete user.email;
+    delete user.twitchId;
+
+    let members: User[] = [user];
+
+    const toDo = [];
+    for (const member of tourneySignUpDto.members) {
+      toDo.push(
+        new Promise(async (resolve, reject) => {
+          let currentMember = await this.authService.findOne(member);
+          if (currentMember) members.push(currentMember);
+          else {
+            try {
+              currentMember = await this.authService.findOneTwitchAndRegister(
+                member,
+              );
+              delete currentMember.role;
+              delete currentMember.isActive;
+              delete currentMember.email;
+              delete currentMember.twitchId;
+              members.push(currentMember);
+            } catch (error) {
+              reject(error);
+            }
+          }
+
+          resolve(currentMember);
+        }),
+      );
+    }
+
+    await Promise.all(toDo).catch((error) => {
+      throw error;
     });
 
+    const team = this.tourneysTeamsRepository.create({
+      tier,
+      members,
+      tourney,
+      captain: user,
+      invited: [],
+    });
+
+    for (const member of members) {
+      if (member.id !== user.id)
+        team.invited.push(
+          this.tourneyInvitesRepository.create({
+            toUser: member,
+          }),
+        );
+    }
+
     try {
-      await this.tourneyToUsersRepository.save(relation);
-      return {
-        statusCode: 200,
-        message: 'ok',
-      };
+      await this.tourneysTeamsRepository.save(team);
+
+      return team;
     } catch (error) {
       this.handleDBError(error);
     }
   }
 
-  //! Not optimized since it queries tourneyrepository again
-  async addPersonAdmin(
+  async signUpAdmin(
     term: string,
-    tourneyPersonDto: TourneyPersonDto,
+    tourneySignUpDto: TourneySignUpDto,
     owner: User,
+    tier: number = 0,
   ) {
-    const { twitchUsername } = tourneyPersonDto;
     const tourney = await this.findOne(term);
-
     if (!this.isTourneyOwnerOrPrivileged(tourney, owner))
       throw new UnauthorizedException(
         'Tourney does not belong to ' + owner.twitchUsername,
       );
 
-    let user = await this.authService.findOne(twitchUsername);
-
-    if (!user) {
-      // Get own token
-      var body: TwitchBodyRequest = {
-        client_id: this.configService.get('TWITCH_CLIENT_ID'),
-        client_secret: this.configService.get('TWITCH_SECRET'),
-        grant_type: 'client_credentials',
-      };
-
-      const encodedBody = this.authService.encodeBody(body);
-      const { access_token: token } = await this.authService.getTwitchTokenData(
-        encodedBody,
+    if (tourneySignUpDto.members.length !== tourney.peoplePerTeam)
+      throw new BadRequestException(
+        `Team members array has to have a length of ${tourney.peoplePerTeam}`,
       );
 
-      const { data: userData } = await this.authService.getUserData(
-        null,
-        token,
-        twitchUsername,
+    const [captainUsername] = tourneySignUpDto.members.splice(0, 1);
+
+    let captain = await this.authService.findOne(captainUsername);
+    if (!captain)
+      captain = await this.authService.findOneTwitchAndRegister(
+        captainUsername,
       );
 
-      if (userData.length !== 1)
-        throw new NotFoundException(`Twitch user ${twitchUsername} not found`);
-
-      user = await this.authService.register({
-        twitchId: userData[0].id,
-        twitchUsername: userData[0].login,
-        twitchProfileImageUrl: userData[0].profile_image_url,
-      });
-    }
-
-    return this.addPerson(term, user);
+    return this.signUp(term, tourneySignUpDto, captain, tier);
   }
 
-  async removePerson(term: string, user: User) {
-    const tourney = await this.findOne(term);
+  async signOut(term: string, user: User, tourney?: Tourney) {
+    if (!tourney) tourney = await this.findOne(term);
 
-    const userIndex = tourney.people.findIndex(
-      (playerInfo) => playerInfo.user.id === user.id,
-    );
+    const tourneyTeamsQB = this.tourneysTeamsRepository.createQueryBuilder();
 
-    if (!userIndex) throw new NotFoundException('User is not in the tourney');
+    const team = await tourneyTeamsQB
+      .leftJoinAndSelect('TourneysTeams.members', 'Members')
+      .where(
+        'TourneysTeams.tourneyId=:tourneyId AND TourneysTeams.verifiedInvites=true AND Members.twitchUsername=:username',
+        {
+          tourneyId: tourney.id,
+          username: user.twitchUsername,
+        },
+      )
+      .getOne();
 
-    tourney.people.splice(userIndex, 1);
+    if (!team)
+      throw new NotFoundException(
+        `Player '${user.twitchUsername}' was not in a team`,
+      );
 
     try {
-      await this.tourneyRepository.manager.save(tourney);
+      const response = await this.tourneysTeamsRepository.delete({
+        id: team.id,
+      });
+      if (response.affected < 1)
+        throw new InternalServerErrorException(
+          'Something unexpected happened when deleting team',
+        );
       return {
         statusCode: 200,
         message: 'ok',
@@ -235,6 +329,98 @@ export class TourneysService {
     } catch (error) {
       this.handleDBError(error);
     }
+  }
+
+  async signOutAdmin(
+    term: string,
+    user: User,
+    tourneyPersonDto: TourneyPersonDto,
+  ) {
+    const tourney = await this.findOne(term);
+
+    if (!this.isTourneyOwnerOrPrivileged(tourney, user))
+      throw new UnauthorizedException(
+        `User ${user.twitchUsername} is not owner or admin`,
+      );
+
+    const person = await this.authService.findOne(
+      tourneyPersonDto.twitchUsername,
+    );
+    if (!person)
+      throw new NotFoundException(
+        `Player ${tourneyPersonDto.twitchUsername} is not registered`,
+      );
+
+    return this.signOut(undefined, person, tourney);
+  }
+
+  //! Could have some optimization to not query database that much
+  async inviteResponse(inviteResponseDto: InviteResponseDto, user: User) {
+    const tourneyInvitesQB = this.tourneyInvitesRepository.createQueryBuilder();
+
+    const invite = await tourneyInvitesQB
+      .leftJoinAndSelect('TourneyInvites.toUser', 'toUser')
+      .leftJoinAndSelect('TourneyInvites.fromTeam', 'fromTeam')
+      .where('TourneyInvites.id=:id', {
+        id: inviteResponseDto.inviteId,
+      })
+      .getOne();
+
+    if (!invite)
+      throw new NotFoundException(
+        'Invite not found, maybe someone else rejected it',
+      );
+
+    if (invite.toUser.id !== user.id && !this.isPrivileged(user))
+      throw new UnauthorizedException();
+
+    if (!inviteResponseDto.accepted) {
+      if (!invite.fromTeam.id)
+        throw new InternalServerErrorException(
+          'Could not deny invite, something unexpected happened',
+        );
+
+      try {
+        await this.tourneysTeamsRepository.delete({ id: invite.fromTeam.id });
+        return {
+          statusCode: 200,
+          message: 'ok',
+        };
+      } catch (error) {
+        this.handleDBError(error);
+      }
+    }
+
+    if (invite.accepted)
+      throw new BadRequestException('Invite already accepted');
+
+    await this.tourneyInvitesRepository.update(inviteResponseDto.inviteId, {
+      accepted: inviteResponseDto.accepted,
+    });
+
+    const [{ invited: teamInvites }] = await this.tourneysTeamsRepository.find({
+      where: { id: invite.fromTeam.id },
+      relations: { invited: true },
+      take: 1,
+    });
+
+    let verifiedInvites = true;
+    for (const invite of teamInvites) {
+      if (!invite.accepted) {
+        verifiedInvites = false;
+        break;
+      }
+    }
+
+    if (verifiedInvites)
+      this.tourneysTeamsRepository.update(invite.fromTeam.id, {
+        verifiedInvites,
+      });
+
+    return {
+      statusCode: 200,
+      message: 'ok',
+    };
   }
 
   private handleDBError(error: any) {

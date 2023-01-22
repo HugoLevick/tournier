@@ -1,13 +1,16 @@
-import { Tourney } from '../../tourneys/entities/tourney.entity';
-import { TourneysToUsers } from '../../tourneys/entities/tourneys_people_users.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
   Column,
   Entity,
+  ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { TourneysTeams } from 'src/tourneys/entities/tourneys_teams.entity';
+import { Tourney } from '../../tourneys/entities/tourney.entity';
+import { TourneyInvites } from 'src/tourneys/entities/tourney-invites.entity';
+import { ManyToOne } from 'typeorm';
 
 export enum UserRoles {
   user = 'USER',
@@ -66,10 +69,18 @@ export class User {
   })
   tourneysHosted: Tourney[];
 
-  @OneToMany(() => TourneysToUsers, (people) => people.user, {
+  @ManyToMany(() => TourneysTeams, (signUps) => signUps.members, {
     cascade: true,
   })
-  tourneysJoined: TourneysToUsers[];
+  tourneysJoined: TourneysTeams[];
+
+  @OneToMany(() => TourneysTeams, (signUps) => signUps.captain)
+  teamCaptain: TourneysTeams[];
+
+  @OneToMany(() => TourneyInvites, (invite) => invite.toUser, {
+    cascade: true,
+  })
+  incomingInvites: TourneyInvites[];
 
   @BeforeInsert()
   @BeforeUpdate()

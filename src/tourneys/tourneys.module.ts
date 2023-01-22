@@ -6,13 +6,14 @@ import { Tourney } from './entities/tourney.entity';
 import { AuthService } from '../auth/auth.service';
 import { AuthModule } from '../auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
-import { TourneysToUsers } from './entities/tourneys_people_users.entity';
+import { TourneysTeams } from 'src/tourneys/entities/tourneys_teams.entity';
+import { TourneyInvites } from './entities/tourney-invites.entity';
 
 @Module({
   controllers: [TourneysController],
   providers: [TourneysService, AuthService],
   imports: [
-    TypeOrmModule.forFeature([Tourney, TourneysToUsers]),
+    TypeOrmModule.forFeature([Tourney, TourneysTeams, TourneyInvites]),
     AuthModule,
     ConfigModule,
   ],
