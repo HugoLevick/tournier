@@ -78,6 +78,21 @@ a:visited {
     justify-content: center;
 }
 
+.fa-icon-sm, .fa-icon-m, .fa-icon-l {
+    fill: var(--primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.fa-icon-sm {
+    width: 16px;
+}
+
+.fa-icon-m {
+    width: 22px;
+}
+
 /* Nav */
 
 .nav {
@@ -86,6 +101,15 @@ a:visited {
     justify-content: space-between;
     padding: 0 5rem;
     border-bottom: 5px var(--primary) solid;
+}
+
+#login-anchor {
+    white-space: nowrap;
+}
+
+.header-links {
+    display: flex;
+    gap: 2rem;
 }
 
 /* Main */
@@ -330,6 +354,7 @@ main {
     align-self: flex-start;
     height: 50vh;
     border-left: 3px var(--primary) solid;
+    overflow: auto;
 }
 
 .player-search-bar {
@@ -352,6 +377,16 @@ main {
 .player-trow {
     display: grid;
     grid-template-columns: 2fr 1fr 2fr;
+}
+
+.player-table-pfp {
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    width: 24px;
+    margin-right: 1rem;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
 }
 
 .ad1 {

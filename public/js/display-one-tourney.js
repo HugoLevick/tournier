@@ -57,7 +57,14 @@ async function getOneTourney(term) {
     for (const player of team.members) {
       const playerHtml = `
       <div class="player-trow" id="${player.id}">
-        <div class="container-center">${player.twitchUsername}</div>
+        <div class="container-center">
+          <div
+            class="player-table-pfp"
+            style="background-image: url('${player.twitchProfileImageUrl}');"
+          >
+          </div>
+          ${player.twitchUsername}
+        </div>
         <div class="container-center">${
           tourney.tiered ? team.tier : 'N/A'
         }</div>
