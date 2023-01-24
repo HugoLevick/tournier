@@ -4,5 +4,5 @@ export class TourneySignUpDto {
   @IsString({ each: true })
   @MinLength(4, { each: true })
   @IsOptional()
-  readonly members: string[] = [];
+  members: string[] = [];
 }

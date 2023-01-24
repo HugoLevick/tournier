@@ -3,16 +3,21 @@ let jwt, user;
 
 async function getUserByJwt() {
   jwt = localStorage.getItem('JWT');
-
-  if (jwt) {
-    user = await fetch('/api/auth/validate', {
+  console.log(jwt);
+  if (jwt && jwt != 'undefined') {
+    connectToAlertsWs(jwt);
+    const userResponse = await fetch('/api/auth/validate', {
       method: 'GET',
       headers: {
         Authorization: 'Bearer ' + jwt,
       },
-    }).then(async (response) => {
-      if (response.status === 200) return await response.json();
     });
+
+    if (!userResponse.ok) {
+      localStorage.removeItem('JWT');
+    } else {
+      user = await userResponse.json();
+    }
 
     if (loginAnchor && user) {
       delete loginAnchor.href;
@@ -30,9 +35,28 @@ async function getUserByJwt() {
   if (!user) {
     loginAnchor.href = `https://id.twitch.tv/oauth2/authorize?client_id=cygujur0ps52ov7fguxb8tix06wa7z&redirect_uri=${location.origin}/auth/twitch-oauth.html&response_type=code&scope=user:read:email`;
     loginAnchor.innerHTML = 'Login with Twitch';
+    signUpButton.innerHTML = 'Log In';
+    signUpButton.setAttribute('onclick', '');
+    signUpButton.disabled = true;
   }
 
   console.log({ user });
+}
+
+async function connectToAlertsWs(jwt) {
+  const socket = io('/alerts', {
+    extraHeaders: {
+      authentication: jwt,
+    },
+  });
+
+  socket.on('connect', () => {
+    console.log('connected');
+  });
+
+  socket.on('disconnect', () => {
+    console.log('disconnected');
+  });
 }
 
 getUserByJwt();

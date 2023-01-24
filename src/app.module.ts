@@ -8,6 +8,8 @@ import { TmiModule } from './tmi/tmi.module';
 import { AuthModule } from './auth/auth.module';
 import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { TourneysWsModule } from './tourneys-ws/tourneys-ws.module';
+import { AlertsWsModule } from './alerts-ws/alerts-ws.module';
 
 @Module({
   imports: [
@@ -37,6 +39,10 @@ import { ServeStaticModule } from '@nestjs/serve-static';
     TmiModule,
 
     AuthModule,
+
+    TourneysWsModule,
+
+    AlertsWsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

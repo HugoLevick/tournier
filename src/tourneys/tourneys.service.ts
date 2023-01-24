@@ -19,6 +19,7 @@ import { TourneysTeams } from 'src/tourneys/entities/tourneys_teams.entity';
 import { TourneySignUpDto } from './dto/tourney-signup.dto';
 import { TourneyInvites } from './entities/tourney-invites.entity';
 import { InviteResponseDto } from './dto/invite-response.dto';
+import { TourneysWsGateway } from '../tourneys-ws/tourneys-ws.gateway';
 
 @Injectable()
 export class TourneysService {
@@ -30,6 +31,7 @@ export class TourneysService {
     @InjectRepository(TourneyInvites)
     private readonly tourneyInvitesRepository: Repository<TourneyInvites>,
     private readonly authService: AuthService,
+    private readonly tourneysWsGateway: TourneysWsGateway,
   ) {}
 
   async create(createTourneyDto: CreateTourneyDto, user: User) {
@@ -261,7 +263,7 @@ export class TourneysService {
 
     try {
       await this.tourneysTeamsRepository.save(team);
-
+      this.tourneysWsGateway.emitSignUp(tourney.id, team);
       return team;
     } catch (error) {
       this.handleDBError(error);
@@ -303,6 +305,7 @@ export class TourneysService {
 
     const team = await tourneyTeamsQB
       .leftJoinAndSelect('TourneysTeams.members', 'Members')
+      .leftJoinAndSelect('TourneysTeams.captain', 'Captain')
       .where(
         'TourneysTeams.tourneyId=:tourneyId AND TourneysTeams.verifiedInvites=true AND Members.twitchUsername=:username',
         {
@@ -325,6 +328,7 @@ export class TourneysService {
         throw new InternalServerErrorException(
           'Something unexpected happened when deleting team',
         );
+      this.tourneysWsGateway.emitSignOut(tourney.id, team);
       return {
         statusCode: 200,
         message: 'ok',

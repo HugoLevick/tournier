@@ -17,6 +17,8 @@
     <!-- Styles -->
     <link rel="stylesheet" href="/css/styles.css" />
     <title>Tournier</title>
+    <!-- Socket io -->
+    <script src="/socket.io/socket.io.js"></script>
   </head>
   <body class="text">
     <header>
@@ -45,6 +47,6 @@
       <section class="tournament-grid"></section>
     </main>
   </body>
-  <script src="js/getUserByJwt.js"></script>
-  <script src="js/display-index-tourneys.js" defer></script>
+  <script defer src="js/get-user-and-connect-ws.js"></script>
+  <script defer src="js/display-index-tourneys.js"></script>
 </html>

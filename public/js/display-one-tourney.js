@@ -1,24 +1,3 @@
-let params = new URL(document.location).searchParams;
-let tourney;
-const term = params.get('term').toLowerCase();
-if (!term) window.location = '/';
-
-const titleLbl = document.querySelector('.general__title');
-const hostGameLbl = document.querySelector('.general__host-game');
-const prizeLbl = document.getElementById('prize-square');
-const tiersLbl = document.getElementById('tiers-square');
-const startsAt = document.getElementById('time-square');
-const signUpButton = document.querySelector('.sign-up-button');
-const peopleTable = document.querySelector('.player-table');
-const playerTablePH = `
-          <div
-            id="player-table-placeholder"
-            class="container-center"
-            style="opacity: 60%"
-          >
-            Looks like no one is here... yet 👀
-          </div>`;
-
 async function getOneTourney(term) {
   const response = await fetch('/api/tourneys/' + term, {
     method: 'GET',
@@ -30,6 +9,8 @@ async function getOneTourney(term) {
   }
 
   tourney = await response.json();
+  connectToTourneyWs();
+
   const host = tourney.creator.twitchUsername;
   console.log(tourney);
   titleLbl.innerHTML = tourney.name;
@@ -54,44 +35,24 @@ async function getOneTourney(term) {
   );
 
   for (const team of tourney.signUps) {
-    for (const player of team.members) {
-      const playerHtml = `
-      <div class="player-trow" id="${player.id}">
-        <div class="container-center">
-          <div
-            class="player-table-pfp"
-            style="background-image: url('${player.twitchProfileImageUrl}');"
-          >
-          </div>
-          ${player.twitchUsername}
-        </div>
-        <div class="container-center">${
-          tourney.tiered ? team.tier : 'N/A'
-        }</div>
-        <div class="container-center">Coming soon</div>
-      </div>
-    `;
-      peopleTable.innerHTML += playerHtml;
-    }
+    addNewTeam(team);
   }
 
   if (tourney.signUps.length === 0) peopleTable.innerHTML += playerTablePH;
 }
 
-async function signUp() {
-  let response = await fetch(`/api/tourneys/${tourney.id}/signup`, {
-    method: 'POST',
-    headers: {
-      Authorization: 'Bearer ' + jwt,
-    },
+async function connectToTourneyWs() {
+  const socket = io('/tourneys');
+
+  socket.on('sign-up-t-' + tourney.id, (team) => {
+    addNewTeam(team);
   });
 
-  if (response.ok) {
-    swal.fire('You joined the tourney!', '', 'success');
-  } else {
-    response = await response.json();
-    swal.fire('Whoops!', response.message, 'error');
-  }
+  socket.on('sign-out-t-' + tourney.id, (team) => {
+    removeTeam(team);
+  });
+
+  console.log('sign-up-t-' + tourney.id);
 }
 
 getOneTourney(term);

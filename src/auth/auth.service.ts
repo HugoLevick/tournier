@@ -35,14 +35,18 @@ export class AuthService {
     const findOneQuery = this.userRepository.createQueryBuilder();
 
     return await findOneQuery
-      .where('User.twitchId=:term OR User.twitchUsername=:term', { term })
+      .where('User.twitchId=:term OR User.twitchUsername=:term', {
+        term: term.toLowerCase(),
+      })
       .getOne();
   }
 
   async register(registerUserDto: RegisterUserDto) {
+    const twitchUsername = registerUserDto.twitchUsername.toLowerCase();
     try {
       const user = this.userRepository.create({
         ...registerUserDto,
+        twitchUsername,
       });
 
       await this.userRepository.save(user);
@@ -111,7 +115,12 @@ export class AuthService {
     let user: User;
     user = await this.userRepository.findOne({
       where: { twitchId, isActive: true },
-      select: { id: true, email: true, twitchProfileImageUrl: true },
+      select: {
+        id: true,
+        email: true,
+        twitchProfileImageUrl: true,
+        twitchUsername: true,
+      },
     });
 
     if (!user)
@@ -138,12 +147,16 @@ export class AuthService {
 
     if (code)
       return {
-        token: this.getJwToken({ id: user.id }),
+        token: this.getJwToken({
+          id: user.id,
+          twitchUsername: user.twitchUsername,
+        }),
       };
     else return {};
   }
 
   async findOneTwitchAndRegister(twitchUsername: string) {
+    twitchUsername = twitchUsername.toLowerCase();
     //* Get own token
     const body = {
       client_id: this.configService.get('TWITCH_CLIENT_ID'),
@@ -180,9 +193,11 @@ export class AuthService {
   }
   //TODO: Only admins can update roles, twitchusername, isactive
   async update(id: string, updateUserDto: UpdateUserDto) {
+    const twitchUsername = updateUserDto.twitchUsername?.toLowerCase();
     const user = await this.userRepository.preload({
       id,
       ...updateUserDto,
+      twitchUsername,
     });
 
     try {

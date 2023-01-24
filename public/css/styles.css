@@ -6,6 +6,7 @@
     --background-secondary: rgb(67, 67, 67);
     --darker-background: rgb(29, 29, 29);
     --primary: rgb(174, 122, 8);
+    --primaryDisabled: rgb(98, 90, 75);
     --secondary: #9e9e9e;
 }
 
@@ -318,7 +319,9 @@ main {
 }
 
 .sign-up-button:disabled {
-    background-color: purple;
+    background-color: var(--primaryDisabled);
+    cursor: unset;
+    opacity: 50%;
 }
 
 .side-options {
