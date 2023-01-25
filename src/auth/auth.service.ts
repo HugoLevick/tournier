@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { LoginUserDto } from './dto/login-user-dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
@@ -30,6 +30,16 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly commonService: CommonService,
   ) {}
+
+  async search(term: string) {
+    return this.userRepository.find({
+      select: { id: false, twitchUsername: true, twitchProfileImageUrl: true },
+      where: { twitchUsername: Like(`%${term}%`) },
+      order: {
+        twitchUsername: 'ASC',
+      },
+    });
+  }
 
   async findOne(term: string) {
     const findOneQuery = this.userRepository.createQueryBuilder();

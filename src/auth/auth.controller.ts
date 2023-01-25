@@ -28,6 +28,11 @@ export class AuthController {
     return user;
   }
 
+  @Get('search/:term')
+  search(@Param('term') term: string) {
+    return this.authService.search(term);
+  }
+
   @Post('login')
   login(@Body() loginUserDto: LoginUserDto) {
     return this.authService.login(loginUserDto);

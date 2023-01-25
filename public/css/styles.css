@@ -94,6 +94,11 @@ a:visited {
     width: 22px;
 }
 
+.square-spinner {
+    scale: 0.5;
+    color: var(--secondary);
+}
+
 /* Nav */
 
 .nav {
@@ -398,4 +403,132 @@ main {
 
 .ad2 {
     grid-area: ad2;
+}
+
+/* SWAL ALERTS */
+.colored-toast.swal2-icon-success {
+    background-color: #a5dc86 !important;
+}
+
+.colored-toast.swal2-icon-error {
+    background-color: #f27474 !important;
+}
+
+.colored-toast.swal2-icon-warning {
+    background-color: #f8bb86 !important;
+}
+
+.colored-toast.swal2-icon-info {
+    background-color: #3fc3ee !important;
+}
+
+.colored-toast.swal2-icon-question {
+    background-color: #87adbd !important;
+}
+
+.colored-toast .swal2-title {
+    color: white;
+}
+
+.colored-toast .swal2-close {
+    color: white;
+}
+
+.colored-toast .swal2-html-container {
+    color: white;
+}
+
+.colored-toast {
+    height: 10rem;
+}
+
+.alert-popup {
+    width: 40%;
+    max-width: 500px;
+    font-family: var(--textFont);
+    color: white;
+    font-size: 1.5rem;
+    background-color: var(--background);
+}
+
+body.swal2-shown>[aria-hidden="true"] {
+    transition: 0.1s filter;
+    filter: blur(8px);
+}
+
+.sign-up-main {
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.sign-up-popup {
+    width: 50%;
+    max-width: 900px;
+    font-family: var(--textFont);
+    color: white;
+    font-size: 2rem;
+    background-color: var(--background);
+}
+
+.sign-up-confirm {
+    background-color: var(--primary) !important;
+}
+
+.sign-up-members, .sign-up-select {
+    display: flex;
+    flex-direction: column;
+    width: 70%;
+    border-radius: 0.3rem;
+    overflow: auto;
+}
+
+.sign-up-members > *:first-child{
+    align-self: flex-start;
+    margin-bottom: 1rem;
+}
+
+.sign-up-player {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 2rem;
+}
+
+.sign-up-player > *:nth-child(2){
+    margin-right: auto;
+}
+
+.su-player-pfp {
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    width: 30px;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+.popup-search-player {
+    background-color: var(--darker-background);
+    border: none;
+    height: 4rem;
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.popup-search-player:focus {
+    border: none;
+    outline: 0;
+    border-bottom: 3px var(--primary) solid;
+}
+
+.player-list {
+    max-height: 20rem;
+    overflow: auto;
+}
+
+.swal2-validation-message {
+    background-color: var(--background);
+    color: var(--secondary);
+    transition: display 1s ease-in-out;
 }

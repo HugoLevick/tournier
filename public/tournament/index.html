@@ -18,6 +18,7 @@
     />
     <!-- Styles -->
     <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet" href="/css/spinner.css" />
     <title>Tournier</title>
     <!-- ADS -->
     <script
@@ -91,7 +92,9 @@
             </div>
           </div>
           <div>
-            <button class="sign-up-button" onclick="signUp()">Sign Up</button>
+            <button class="sign-up-button" onclick="signUp()" disabled>
+              Sign Up
+            </button>
           </div>
         </div>
       </div>
@@ -131,6 +134,7 @@
       </amp-ad>
     </main>
   </body>
+  <script src="/js/swal-mixin.js"></script>
   <script src="/js/tourney-functions.js"></script>
   <script src="/js/get-user-and-connect-ws.js"></script>
   <script defer src="/js/display-one-tourney.js"></script>

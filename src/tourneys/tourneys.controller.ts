@@ -8,7 +8,6 @@ import {
   Delete,
   ParseUUIDPipe,
   Query,
-  Put,
 } from '@nestjs/common';
 import { TourneysService } from './tourneys.service';
 import { CreateTourneyDto } from './dto/create-tourney.dto';
@@ -94,7 +93,7 @@ export class TourneysController {
   }
 
   @Auth()
-  @Put(':term/invite')
+  @Patch(':term/invite')
   inviteResponse(
     @Body() inviteResponseDto: InviteResponseDto,
     @GetUser() user: User,

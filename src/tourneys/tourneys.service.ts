@@ -156,6 +156,12 @@ export class TourneysService {
     tier: number = 0,
     tourney?: Tourney,
   ) {
+    if (this.hasDuplicates(tourneySignUpDto.members))
+      throw new BadRequestException(`You cant repeat a teammate`);
+
+    tourneySignUpDto.members = tourneySignUpDto.members.map((m) =>
+      m.toLowerCase(),
+    );
     if (!tourney) tourney = await this.findOne(term);
 
     if (tourneySignUpDto.members.length !== tourney.peoplePerTeam - 1)
@@ -166,22 +172,29 @@ export class TourneysService {
     const checkInTourneyTeamQB =
       this.tourneysTeamsRepository.createQueryBuilder();
 
-    const inTeams = await checkInTourneyTeamQB
+    const inTeam = await checkInTourneyTeamQB
       .select(['TourneysTeams'])
       .leftJoinAndSelect('TourneysTeams.members', 'Members')
+      .leftJoinAndSelect('TourneysTeams.captain', 'Captain')
       .where(
-        'TourneysTeams.tourneyId=:tourneyId AND TourneysTeams.verifiedInvites=true AND Members.twitchUsername IN(:...members)',
+        'TourneysTeams.tourneyId=:tourneyId AND (Captain.id=:captainId OR (TourneysTeams.verifiedInvites=true AND Members.twitchUsername IN(:...members)))',
         {
           tourneyId: tourney.id,
+          captainId: user.id,
           members: [user.twitchUsername, ...tourneySignUpDto.members],
         },
       )
-      .getRawMany();
+      .getRawOne();
 
-    if (inTeams.length !== 0)
-      throw new BadRequestException(
-        `Player ${inTeams[0].Members_twitchUsername} is already in a team`,
-      );
+    if (inTeam)
+      if (inTeam['Captain_id'] === user.id)
+        throw new BadRequestException(
+          `Player ${inTeam['Captain_twitchUsername']} is already in a team`,
+        );
+      else
+        throw new BadRequestException(
+          `Player ${inTeam.Members_twitchUsername} is already in a team`,
+        );
 
     const invitedPeopleQB = this.tourneyInvitesRepository.createQueryBuilder();
 
@@ -197,11 +210,11 @@ export class TourneysService {
             members: tourneySignUpDto.members,
           },
         )
-        .getMany();
+        .getOne();
 
-      if (invitedPeople.length !== 0) {
+      if (invitedPeople) {
         throw new BadRequestException(
-          `Player '${invitedPeople[0].toUser.twitchUsername}' already has a pending invite from you`,
+          `Player '${invitedPeople.toUser.twitchUsername}' already has a pending invite from you`,
         );
       }
     }
@@ -264,6 +277,8 @@ export class TourneysService {
     try {
       await this.tourneysTeamsRepository.save(team);
       this.tourneysWsGateway.emitSignUp(tourney.id, team);
+      await this.removeTeams(tourney, user);
+      //TODO: Alert that someone created a team and deleted their invites
       return team;
     } catch (error) {
       this.handleDBError(error);
@@ -307,9 +322,10 @@ export class TourneysService {
       .leftJoinAndSelect('TourneysTeams.members', 'Members')
       .leftJoinAndSelect('TourneysTeams.captain', 'Captain')
       .where(
-        'TourneysTeams.tourneyId=:tourneyId AND TourneysTeams.verifiedInvites=true AND Members.twitchUsername=:username',
+        'TourneysTeams.tourneyId=:tourneyId AND ( Captain.id=:captainId OR (TourneysTeams.verifiedInvites=true AND Members.twitchUsername=:username))',
         {
           tourneyId: tourney.id,
+          captainId: user.id,
           username: user.twitchUsername,
         },
       )
@@ -375,7 +391,7 @@ export class TourneysService {
 
     if (!invite)
       throw new NotFoundException(
-        'Invite not found, maybe someone else rejected it',
+        'Invite not found, maybe someone in the team rejected it',
       );
 
     if (invite.toUser.id !== user.id && !this.isPrivileged(user))
@@ -440,6 +456,22 @@ export class TourneysService {
     }
   }
 
+  private async removeTeams(tourney: Tourney, user: User) {
+    const pendingInvites = await this.tourneysTeamsRepository
+      .createQueryBuilder()
+      .leftJoinAndSelect('TourneysTeams.invited', 'Invites')
+      .where('TourneysTeams.tourneyId=:tourneyId AND Invites.toUser=:userId', {
+        tourneyId: tourney.id,
+        userId: user.id,
+      })
+      .getMany();
+
+    if (pendingInvites.length > 0) {
+      await this.tourneysTeamsRepository.remove(pendingInvites);
+      //TODO: Emit to every member about removing the invites
+    }
+  }
+
   private isPrivileged(user: User) {
     if (user.role === UserRoles.admin || user.role === UserRoles.owner)
       return true;
@@ -458,5 +490,11 @@ export class TourneysService {
       /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/gi;
 
     return regexExp.test(str);
+  }
+
+  private hasDuplicates(a: any[]) {
+    const noDups = new Set(a);
+
+    return a.length !== noDups.size;
   }
 }
