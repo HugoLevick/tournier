@@ -9,15 +9,25 @@ import { ConfigModule } from '@nestjs/config';
 import { TourneysTeams } from 'src/tourneys/entities/tourneys_teams.entity';
 import { TourneyInvites } from './entities/tourney-invites.entity';
 import { TourneysWsGateway } from '../tourneys-ws/tourneys-ws.gateway';
+import { AlertsWsModule } from '../alerts-ws/alerts-ws.module';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   controllers: [TourneysController],
-  providers: [TourneysService, AuthService, TourneysWsGateway],
+  providers: [
+    TourneysService,
+    AuthService,
+    TourneysWsGateway,
+    NotificationsService,
+  ],
   imports: [
     TypeOrmModule.forFeature([Tourney, TourneysTeams, TourneyInvites]),
     AuthModule,
     ConfigModule,
+    AlertsWsModule,
+    NotificationsModule,
   ],
-  exports: [TypeOrmModule],
+  exports: [TypeOrmModule, TourneysWsGateway],
 })
 export class TourneysModule {}

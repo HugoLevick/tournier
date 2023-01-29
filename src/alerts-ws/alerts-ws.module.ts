@@ -6,5 +6,6 @@ import { AuthModule } from 'src/auth/auth.module';
 @Module({
   providers: [AlertsWsGateway, AlertsWsService],
   imports: [AuthModule],
+  exports: [AlertsWsGateway, AlertsWsService],
 })
 export class AlertsWsModule {}

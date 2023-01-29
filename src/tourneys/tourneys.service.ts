@@ -20,6 +20,7 @@ import { TourneySignUpDto } from './dto/tourney-signup.dto';
 import { TourneyInvites } from './entities/tourney-invites.entity';
 import { InviteResponseDto } from './dto/invite-response.dto';
 import { TourneysWsGateway } from '../tourneys-ws/tourneys-ws.gateway';
+import { AlertsWsGateway } from '../alerts-ws/alerts-ws.gateway';
 
 @Injectable()
 export class TourneysService {
@@ -32,6 +33,7 @@ export class TourneysService {
     private readonly tourneyInvitesRepository: Repository<TourneyInvites>,
     private readonly authService: AuthService,
     private readonly tourneysWsGateway: TourneysWsGateway,
+    private readonly alertsWsGateway: AlertsWsGateway,
   ) {}
 
   async create(createTourneyDto: CreateTourneyDto, user: User) {
@@ -75,6 +77,8 @@ export class TourneysService {
         .leftJoinAndSelect('Tourney.signUps', 'signUps')
         .leftJoinAndSelect('signUps.captain', 'captain')
         .leftJoinAndSelect('signUps.members', 'members')
+        .leftJoinAndSelect('signUps.invited', 'invited')
+        .leftJoinAndSelect('invited.toUser', 'toUserInvite')
         .getOne();
     } catch (error) {
       this.handleDBError(error);
@@ -157,7 +161,7 @@ export class TourneysService {
     tourney?: Tourney,
   ) {
     if (this.hasDuplicates(tourneySignUpDto.members))
-      throw new BadRequestException(`You cant repeat a teammate`);
+      throw new BadRequestException(`You can't repeat a teammate`);
 
     tourneySignUpDto.members = tourneySignUpDto.members.map((m) =>
       m.toLowerCase(),
@@ -172,22 +176,28 @@ export class TourneysService {
     const checkInTourneyTeamQB =
       this.tourneysTeamsRepository.createQueryBuilder();
 
+    let queryMembers = [user.twitchUsername, ...tourneySignUpDto.members];
     const inTeam = await checkInTourneyTeamQB
       .select(['TourneysTeams'])
       .leftJoinAndSelect('TourneysTeams.members', 'Members')
       .leftJoinAndSelect('TourneysTeams.captain', 'Captain')
+      .leftJoinAndSelect('TourneysTeams.invited', 'invited')
+      .leftJoinAndSelect('invited.toUser', 'inviteToUser')
       .where(
-        'TourneysTeams.tourneyId=:tourneyId AND (Captain.id=:captainId OR (TourneysTeams.verifiedInvites=true AND Members.twitchUsername IN(:...members)))',
+        'TourneysTeams.tourneyId=:tourneyId AND (Captain.id=:captainId OR Captain.twitchUsername IN(:...members) OR (TourneysTeams.verifiedInvites=true AND Members.twitchUsername IN(:...members)) OR (inviteToUser.twitchUsername IN(:...members) AND invited.accepted=true ))',
         {
           tourneyId: tourney.id,
           captainId: user.id,
-          members: [user.twitchUsername, ...tourneySignUpDto.members],
+          members: queryMembers,
         },
       )
       .getRawOne();
 
     if (inTeam)
-      if (inTeam['Captain_id'] === user.id)
+      if (
+        inTeam['Captain_id'] === user.id ||
+        queryMembers.includes(inTeam['Captain_twitchUsername'])
+      )
         throw new BadRequestException(
           `Player ${inTeam['Captain_twitchUsername']} is already in a team`,
         );
@@ -203,10 +213,12 @@ export class TourneysService {
         .leftJoinAndSelect('TourneyInvites.toUser', 'toUser')
         .leftJoinAndSelect('TourneyInvites.fromTeam', 'fromTeam')
         .leftJoinAndSelect('fromTeam.captain', 'teamCaptain')
+        .leftJoinAndSelect('fromTeam.tourney', 'tourney')
         .where(
-          'teamCaptain.id=:userId AND toUser.twitchUsername IN(:...members)',
+          'tourney.id=:tourneyId AND teamCaptain.id=:userId AND toUser.twitchUsername IN(:...members)',
           {
             userId: user.id,
+            tourneyId: tourney.id,
             members: tourneySignUpDto.members,
           },
         )
@@ -275,6 +287,13 @@ export class TourneysService {
     }
 
     try {
+      for (const invite of team.invited) {
+        this.alertsWsGateway.sendAlert(
+          invite.toUser.twitchUsername,
+          'You have an invite',
+          invite,
+        );
+      }
       await this.tourneysTeamsRepository.save(team);
       this.tourneysWsGateway.emitSignUp(tourney.id, team);
       await this.removeTeams(tourney, user);
@@ -321,8 +340,10 @@ export class TourneysService {
     const team = await tourneyTeamsQB
       .leftJoinAndSelect('TourneysTeams.members', 'Members')
       .leftJoinAndSelect('TourneysTeams.captain', 'Captain')
+      .leftJoinAndSelect('TourneysTeams.invited', 'invited')
+      .leftJoinAndSelect('invited.toUser', 'inviteToUser')
       .where(
-        'TourneysTeams.tourneyId=:tourneyId AND ( Captain.id=:captainId OR (TourneysTeams.verifiedInvites=true AND Members.twitchUsername=:username))',
+        'TourneysTeams.tourneyId=:tourneyId AND ( Captain.id=:captainId OR (TourneysTeams.verifiedInvites=true AND Members.twitchUsername=:username) OR (inviteToUser.twitchUsername=:username AND invited.accepted=true ))',
         {
           tourneyId: tourney.id,
           captainId: user.id,
@@ -382,9 +403,13 @@ export class TourneysService {
     const tourneyInvitesQB = this.tourneyInvitesRepository.createQueryBuilder();
 
     const invite = await tourneyInvitesQB
+      .select(['TourneyInvites'])
       .leftJoinAndSelect('TourneyInvites.toUser', 'toUser')
       .leftJoinAndSelect('TourneyInvites.fromTeam', 'fromTeam')
-      .where('TourneyInvites.id=:id', {
+      .leftJoinAndSelect('fromTeam.tourney', 'tourney')
+      .leftJoinAndSelect('fromTeam.captain', 'captain')
+      .leftJoinAndSelect('fromTeam.members', 'members')
+      .where('TourneyInvites.id=:id AND TourneyInvites.isActive=true', {
         id: inviteResponseDto.inviteId,
       })
       .getOne();
@@ -404,6 +429,14 @@ export class TourneysService {
         );
 
       try {
+        this.tourneysWsGateway.emitSignOut(
+          invite.fromTeam.tourney.id,
+          invite.fromTeam,
+        );
+        invite.fromTeam.members = invite.fromTeam.members.filter(
+          (m) => m.twitchUsername !== user.twitchUsername,
+        );
+        await this.tourneysWsGateway.emitInviteDeny(invite.fromTeam);
         await this.tourneysTeamsRepository.delete({ id: invite.fromTeam.id });
         return {
           statusCode: 200,
@@ -421,6 +454,9 @@ export class TourneysService {
       accepted: inviteResponseDto.accepted,
     });
 
+    await this.removeTeams(invite.fromTeam.tourney, user);
+    //TODO: Alert that someone created a team and deleted their invites
+
     const [{ invited: teamInvites }] = await this.tourneysTeamsRepository.find({
       where: { id: invite.fromTeam.id },
       relations: { invited: true },
@@ -435,6 +471,13 @@ export class TourneysService {
       }
     }
 
+    this.tourneysWsGateway.emitInviteAccept(
+      invite.fromTeam.tourney.id,
+      user,
+      invite,
+      verifiedInvites,
+    );
+
     if (verifiedInvites)
       this.tourneysTeamsRepository.update(invite.fromTeam.id, {
         verifiedInvites,
@@ -444,6 +487,20 @@ export class TourneysService {
       statusCode: 200,
       message: 'ok',
     };
+  }
+
+  async getInvites(user: User) {
+    return await this.tourneyInvitesRepository
+      .createQueryBuilder('invite')
+      .leftJoinAndSelect('invite.toUser', 'toUser')
+      .leftJoinAndSelect('invite.fromTeam', 'fromTeam')
+      .leftJoinAndSelect('fromTeam.captain', 'captain')
+      .leftJoinAndSelect('fromTeam.members', 'members')
+      .leftJoinAndSelect('fromTeam.tourney', 'tourney')
+      .where('toUser.id=:userId AND invite.accepted IS NULL', {
+        userId: user.id,
+      })
+      .getMany();
   }
 
   private handleDBError(error: any) {
@@ -457,17 +514,30 @@ export class TourneysService {
   }
 
   private async removeTeams(tourney: Tourney, user: User) {
-    const pendingInvites = await this.tourneysTeamsRepository
+    const pendingTeams = await this.tourneysTeamsRepository
       .createQueryBuilder()
       .leftJoinAndSelect('TourneysTeams.invited', 'Invites')
-      .where('TourneysTeams.tourneyId=:tourneyId AND Invites.toUser=:userId', {
-        tourneyId: tourney.id,
-        userId: user.id,
-      })
+      .leftJoinAndSelect('TourneysTeams.captain', 'Captain')
+      .leftJoinAndSelect('TourneysTeams.members', 'Members')
+      .where(
+        'TourneysTeams.tourneyId=:tourneyId AND Invites.toUser=:userId AND Invites.accepted IS NULL',
+        {
+          tourneyId: tourney.id,
+          userId: user.id,
+        },
+      )
       .getMany();
 
-    if (pendingInvites.length > 0) {
-      await this.tourneysTeamsRepository.remove(pendingInvites);
+    if (pendingTeams.length > 0) {
+      for (const team of pendingTeams) {
+        this.tourneysWsGateway.emitSignOut(tourney.id, team);
+        this.alertsWsGateway.sendAlert(
+          team.captain.twitchUsername,
+          'Your team has been dissolved',
+          { type: 'alert', tourney: tourney.slug },
+        );
+      }
+      await this.tourneysTeamsRepository.remove(pendingTeams);
       //TODO: Emit to every member about removing the invites
     }
   }

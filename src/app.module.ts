@@ -10,6 +10,7 @@ import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { TourneysWsModule } from './tourneys-ws/tourneys-ws.module';
 import { AlertsWsModule } from './alerts-ws/alerts-ws.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -43,6 +44,8 @@ import { AlertsWsModule } from './alerts-ws/alerts-ws.module';
     TourneysWsModule,
 
     AlertsWsModule,
+
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

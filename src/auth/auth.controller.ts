@@ -24,7 +24,7 @@ export class AuthController {
 
   @Auth()
   @Get('validate')
-  validate(@GetUser() user: User) {
+  async validate(@GetUser() user: User) {
     return user;
   }
 

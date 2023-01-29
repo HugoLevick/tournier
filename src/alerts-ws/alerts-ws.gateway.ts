@@ -48,4 +48,14 @@ export class AlertsWsGateway
 
     this.alertsWsService.removeClient(client, payload.twitchUsername);
   }
+
+  sendAlert(twitchUsername: string, message: string, data: any) {
+    const client = this.alertsWsService.getConnectedClient(twitchUsername);
+    if (client) {
+      for (const socket in client.sockets) {
+        const currentSocket: Socket = client.sockets[socket];
+        currentSocket.emit('notification', { message, data });
+      }
+    }
+  }
 }

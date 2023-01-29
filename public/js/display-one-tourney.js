@@ -1,4 +1,17 @@
+let params = new URL(document.location).searchParams;
+let tourney;
+const term = params.get('term')?.toLowerCase();
+if (!term) window.location = '/';
+let signUpTeam = [];
+
 async function getOneTourney(term) {
+  if (jwt && !user) {
+    console.log('waiting');
+    setTimeout(() => {
+      getOneTourney(term);
+    }, 100);
+    return;
+  }
   const response = await fetch('/api/tourneys/' + term, {
     method: 'GET',
   });
@@ -52,7 +65,9 @@ async function connectToTourneyWs() {
     removeTeam(team);
   });
 
-  console.log('sign-up-t-' + tourney.id);
+  socket.on('inv-update-t-' + tourney.id, (invite) => {
+    changeStatus(invite.toUser.twitchUsername);
+  });
 }
 
 getOneTourney(term);
