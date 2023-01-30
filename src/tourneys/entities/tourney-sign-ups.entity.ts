@@ -13,7 +13,7 @@ import { Tourney } from './tourney.entity';
 import { TourneyInvites } from './tourney-invites.entity';
 
 @Entity()
-export class TourneysTeams {
+export class TourneySignUps {
   @PrimaryGeneratedColumn('increment')
   id: number;
 

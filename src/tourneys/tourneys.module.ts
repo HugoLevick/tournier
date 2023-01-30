@@ -6,7 +6,7 @@ import { Tourney } from './entities/tourney.entity';
 import { AuthService } from '../auth/auth.service';
 import { AuthModule } from '../auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
-import { TourneysTeams } from 'src/tourneys/entities/tourneys_teams.entity';
+import { TourneySignUps } from 'src/tourneys/entities/tourney-sign-ups.entity';
 import { TourneyInvites } from './entities/tourney-invites.entity';
 import { TourneysWsGateway } from '../tourneys-ws/tourneys-ws.gateway';
 import { AlertsWsModule } from '../alerts-ws/alerts-ws.module';
@@ -22,7 +22,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsService,
   ],
   imports: [
-    TypeOrmModule.forFeature([Tourney, TourneysTeams, TourneyInvites]),
+    TypeOrmModule.forFeature([Tourney, TourneySignUps, TourneyInvites]),
     AuthModule,
     ConfigModule,
     AlertsWsModule,

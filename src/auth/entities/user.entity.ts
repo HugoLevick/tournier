@@ -7,7 +7,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { TourneysTeams } from 'src/tourneys/entities/tourneys_teams.entity';
+import { TourneySignUps } from 'src/tourneys/entities/tourney-sign-ups.entity';
 import { Tourney } from '../../tourneys/entities/tourney.entity';
 import { TourneyInvites } from 'src/tourneys/entities/tourney-invites.entity';
 import { ManyToOne } from 'typeorm';
@@ -69,13 +69,13 @@ export class User {
   })
   tourneysHosted: Tourney[];
 
-  @ManyToMany(() => TourneysTeams, (signUps) => signUps.members, {
+  @ManyToMany(() => TourneySignUps, (signUps) => signUps.members, {
     cascade: true,
   })
-  tourneysJoined: TourneysTeams[];
+  tourneysJoined: TourneySignUps[];
 
-  @OneToMany(() => TourneysTeams, (signUps) => signUps.captain)
-  teamCaptain: TourneysTeams[];
+  @OneToMany(() => TourneySignUps, (signUps) => signUps.captain)
+  teamCaptain: TourneySignUps[];
 
   @OneToMany(() => TourneyInvites, (invite) => invite.toUser, {
     cascade: true,

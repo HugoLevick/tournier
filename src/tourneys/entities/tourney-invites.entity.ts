@@ -1,6 +1,6 @@
 import { User } from 'src/auth/entities/user.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { TourneysTeams } from './tourneys_teams.entity';
+import { TourneySignUps } from './tourney-sign-ups.entity';
 
 @Entity()
 export class TourneyInvites {
@@ -13,12 +13,12 @@ export class TourneyInvites {
   })
   toUser: User;
 
-  @ManyToOne(() => TourneysTeams, (team) => team.invited, {
+  @ManyToOne(() => TourneySignUps, (team) => team.invited, {
     eager: true,
     nullable: false,
     onDelete: 'CASCADE',
   })
-  fromTeam: TourneysTeams;
+  fromTeam: TourneySignUps;
 
   @Column('bool', {
     nullable: true,

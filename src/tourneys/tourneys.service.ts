@@ -15,7 +15,7 @@ import { PaginationDto } from '../common/dtos/pagination.dto';
 import { User, UserRoles } from 'src/auth/entities/user.entity';
 import { TourneyPersonDto } from './dto/tourney-person.dto';
 import { AuthService } from '../auth/auth.service';
-import { TourneysTeams } from 'src/tourneys/entities/tourneys_teams.entity';
+import { TourneySignUps } from 'src/tourneys/entities/tourney-sign-ups.entity';
 import { TourneySignUpDto } from './dto/tourney-signup.dto';
 import { TourneyInvites } from './entities/tourney-invites.entity';
 import { InviteResponseDto } from './dto/invite-response.dto';
@@ -27,8 +27,8 @@ export class TourneysService {
   constructor(
     @InjectRepository(Tourney)
     private readonly tourneyRepository: Repository<Tourney>,
-    @InjectRepository(TourneysTeams)
-    private readonly tourneysTeamsRepository: Repository<TourneysTeams>,
+    @InjectRepository(TourneySignUps)
+    private readonly tourneysTeamsRepository: Repository<TourneySignUps>,
     @InjectRepository(TourneyInvites)
     private readonly tourneyInvitesRepository: Repository<TourneyInvites>,
     private readonly authService: AuthService,
@@ -79,6 +79,7 @@ export class TourneysService {
         .leftJoinAndSelect('signUps.members', 'members')
         .leftJoinAndSelect('signUps.invited', 'invited')
         .leftJoinAndSelect('invited.toUser', 'toUserInvite')
+        .orderBy({ 'signUps.id': 'ASC' })
         .getOne();
     } catch (error) {
       this.handleDBError(error);

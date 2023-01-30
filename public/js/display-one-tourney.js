@@ -47,22 +47,26 @@ async function getOneTourney(term) {
     },
   );
 
-  for (const team of tourney.signUps) {
-    addNewTeam(team);
-  }
+  await showPeople();
 
-  if (tourney.signUps.length === 0) peopleTable.innerHTML += playerTablePH;
+  if (user) signUpButton.disabled = false;
 }
 
-async function connectToTourneyWs() {
+function connectToTourneyWs() {
   const socket = io('/tourneys');
 
   socket.on('sign-up-t-' + tourney.id, (team) => {
-    addNewTeam(team);
+    tourney.signUps.push(team);
+    addNewSignup(team);
   });
 
   socket.on('sign-out-t-' + tourney.id, (team) => {
-    removeTeam(team);
+    removeSignUp(team);
+
+    const index = tourney.signUps.findIndex((t) => t.id === team.id);
+
+    if (typeof index === 'number' && !isNaN(index))
+      tourney.signUps.splice(index, 1);
   });
 
   socket.on('inv-update-t-' + tourney.id, (invite) => {

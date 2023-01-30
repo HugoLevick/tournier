@@ -5,7 +5,7 @@ import {
 } from '@nestjs/websockets';
 import { OnGatewayDisconnect } from '@nestjs/websockets/interfaces';
 import { Server, Socket } from 'socket.io';
-import { TourneysTeams } from '../tourneys/entities/tourneys_teams.entity';
+import { TourneySignUps } from '../tourneys/entities/tourney-sign-ups.entity';
 import { TourneyInvites } from '../tourneys/entities/tourney-invites.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { AlertsWsGateway } from '../alerts-ws/alerts-ws.gateway';
@@ -29,11 +29,11 @@ export class TourneysWsGateway
     //this.tourneysWsService.removeClient(client.id);
   }
 
-  emitSignUp(tourneyId: string, team: TourneysTeams) {
+  emitSignUp(tourneyId: string, team: TourneySignUps) {
     this.wss.emit(`sign-up-t-${tourneyId}`, team);
   }
 
-  emitSignOut(tourneyId: string, team: TourneysTeams) {
+  emitSignOut(tourneyId: string, team: TourneySignUps) {
     this.wss.emit(`sign-out-t-${tourneyId}`, team);
   }
 
@@ -46,7 +46,7 @@ export class TourneysWsGateway
     this.wss.emit(`inv-update-t-${tourneyId}`, invite);
   }
 
-  async emitInviteDeny(team: TourneysTeams) {
+  async emitInviteDeny(team: TourneySignUps) {
     for (const member of team.members) {
       this.alertsWsGateway.sendAlert(
         member.twitchUsername,
