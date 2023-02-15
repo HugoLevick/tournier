@@ -12,6 +12,7 @@ import { TourneysWsGateway } from '../tourneys-ws/tourneys-ws.gateway';
 import { AlertsWsModule } from '../alerts-ws/alerts-ws.module';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { TourneyTeams } from './entities/tourney-teams.entity';
 
 @Module({
   controllers: [TourneysController],
@@ -22,7 +23,12 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsService,
   ],
   imports: [
-    TypeOrmModule.forFeature([Tourney, TourneySignUps, TourneyInvites]),
+    TypeOrmModule.forFeature([
+      Tourney,
+      TourneySignUps,
+      TourneyInvites,
+      TourneyTeams,
+    ]),
     AuthModule,
     ConfigModule,
     AlertsWsModule,

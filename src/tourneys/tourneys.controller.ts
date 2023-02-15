@@ -19,6 +19,7 @@ import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { TourneyPersonDto } from './dto/tourney-person.dto';
 import { TourneySignUpDto } from './dto/tourney-signup.dto';
 import { InviteResponseDto } from './dto/invite-response.dto';
+import { RandomizeSignUpsDto } from './dto/randomize-sign-ups.dto';
 
 @Controller('tourneys')
 export class TourneysController {
@@ -99,5 +100,15 @@ export class TourneysController {
     @GetUser() user: User,
   ) {
     return this.tourneysService.inviteResponse(inviteResponseDto, user);
+  }
+
+  @Auth(UserRoles.creator, UserRoles.admin)
+  @Patch(':id/randomize')
+  createTeams(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() randomizeSignUpsDto: RandomizeSignUpsDto,
+    @GetUser() user: User,
+  ) {
+    return this.tourneysService.randomizeSignUps(id, randomizeSignUpsDto, user);
   }
 }

@@ -1,6 +1,7 @@
 import { User } from '../../auth/entities/user.entity';
 import { BadRequestException } from '@nestjs/common';
 import { TourneySignUps } from 'src/tourneys/entities/tourney-sign-ups.entity';
+import { TourneyTeams } from './tourney-teams.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
@@ -53,14 +54,15 @@ export class Tourney {
   tiered: boolean;
 
   @Column('timestamp', {
-    nullable: true,
+    nullable: false,
   })
   startTime: string;
 
-  @Column('timestamp', {
-    nullable: true,
+  @Column('bool', {
+    nullable: false,
+    default: false,
   })
-  endTime: string;
+  allowCheckIns: boolean;
 
   @Column('enum', {
     nullable: false,
@@ -88,28 +90,25 @@ export class Tourney {
   })
   creator: User;
 
-  @OneToMany(() => TourneySignUps, (people) => people.tourney, {
+  @OneToMany(() => TourneySignUps, (signUp) => signUp.tourney, {
     cascade: true,
   })
   signUps: TourneySignUps[];
+
+  @OneToMany(() => TourneyTeams, (team) => team.tourney, {
+    cascade: true,
+  })
+  teams: TourneyTeams[];
 
   @BeforeInsert()
   @BeforeUpdate()
   editTourneyOnUpdate() {
     this.slug = this.slugify(this.name);
     let dtoStartTime = new Date(this.startTime);
-    let dtoEndTime = new Date(this.endTime);
 
     dtoStartTime.setSeconds(0, 0);
-    dtoEndTime.setSeconds(0, 0);
-
-    if (dtoEndTime < dtoStartTime)
-      throw new BadRequestException(
-        'End time should not be greater than start time',
-      );
 
     this.startTime = dtoStartTime.toISOString();
-    this.endTime = dtoEndTime.toISOString();
   }
 
   private slugify(string: string) {

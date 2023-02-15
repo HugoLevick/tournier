@@ -21,6 +21,8 @@ import { TourneyInvites } from './entities/tourney-invites.entity';
 import { InviteResponseDto } from './dto/invite-response.dto';
 import { TourneysWsGateway } from '../tourneys-ws/tourneys-ws.gateway';
 import { AlertsWsGateway } from '../alerts-ws/alerts-ws.gateway';
+import { RandomizeSignUpsDto } from './dto/randomize-sign-ups.dto';
+import { TourneyTeams } from './entities/tourney-teams.entity';
 
 @Injectable()
 export class TourneysService {
@@ -28,9 +30,11 @@ export class TourneysService {
     @InjectRepository(Tourney)
     private readonly tourneyRepository: Repository<Tourney>,
     @InjectRepository(TourneySignUps)
-    private readonly tourneysTeamsRepository: Repository<TourneySignUps>,
+    private readonly tourneySignUpsRepository: Repository<TourneySignUps>,
     @InjectRepository(TourneyInvites)
     private readonly tourneyInvitesRepository: Repository<TourneyInvites>,
+    @InjectRepository(TourneyTeams)
+    private readonly tourneyTeamsRepository: Repository<TourneyTeams>,
     private readonly authService: AuthService,
     private readonly tourneysWsGateway: TourneysWsGateway,
     private readonly alertsWsGateway: AlertsWsGateway,
@@ -75,11 +79,14 @@ export class TourneysService {
       tourney = await queryBuilder
         .leftJoinAndSelect('Tourney.creator', 'creator')
         .leftJoinAndSelect('Tourney.signUps', 'signUps')
-        .leftJoinAndSelect('signUps.captain', 'captain')
-        .leftJoinAndSelect('signUps.members', 'members')
+        .leftJoinAndSelect('Tourney.teams', 'teams')
+        .leftJoinAndSelect('teams.members', 'teamsMembers')
+        .leftJoinAndSelect('teams.captain', 'teamsCaptain')
+        .leftJoinAndSelect('signUps.captain', 'signUpcaptain')
+        .leftJoinAndSelect('signUps.members', 'signUpMembers')
         .leftJoinAndSelect('signUps.invited', 'invited')
         .leftJoinAndSelect('invited.toUser', 'toUserInvite')
-        .orderBy({ 'signUps.id': 'ASC' })
+        .orderBy({ 'signUps.id': 'ASC', 'teams.id': 'ASC' })
         .getOne();
     } catch (error) {
       this.handleDBError(error);
@@ -175,17 +182,17 @@ export class TourneysService {
       );
 
     const checkInTourneyTeamQB =
-      this.tourneysTeamsRepository.createQueryBuilder();
+      this.tourneySignUpsRepository.createQueryBuilder();
 
     let queryMembers = [user.twitchUsername, ...tourneySignUpDto.members];
     const inTeam = await checkInTourneyTeamQB
-      .select(['TourneysTeams'])
-      .leftJoinAndSelect('TourneysTeams.members', 'Members')
-      .leftJoinAndSelect('TourneysTeams.captain', 'Captain')
-      .leftJoinAndSelect('TourneysTeams.invited', 'invited')
+      .select(['TourneySignUps'])
+      .leftJoinAndSelect('TourneySignUps.members', 'Members')
+      .leftJoinAndSelect('TourneySignUps.captain', 'Captain')
+      .leftJoinAndSelect('TourneySignUps.invited', 'invited')
       .leftJoinAndSelect('invited.toUser', 'inviteToUser')
       .where(
-        'TourneysTeams.tourneyId=:tourneyId AND (Captain.id=:captainId OR Captain.twitchUsername IN(:...members) OR (TourneysTeams.verifiedInvites=true AND Members.twitchUsername IN(:...members)) OR (inviteToUser.twitchUsername IN(:...members) AND invited.accepted=true ))',
+        'TourneySignUps.tourneyId=:tourneyId AND (Captain.id=:captainId OR Captain.twitchUsername IN(:...members) OR (TourneySignUps.verifiedInvites=true AND Members.twitchUsername IN(:...members)) OR (inviteToUser.twitchUsername IN(:...members) AND invited.accepted=true ))',
         {
           tourneyId: tourney.id,
           captainId: user.id,
@@ -269,7 +276,7 @@ export class TourneysService {
       throw error;
     });
 
-    const team = this.tourneysTeamsRepository.create({
+    const team = this.tourneySignUpsRepository.create({
       tier,
       members,
       tourney,
@@ -295,7 +302,7 @@ export class TourneysService {
           invite,
         );
       }
-      await this.tourneysTeamsRepository.save(team);
+      await this.tourneySignUpsRepository.save(team);
       this.tourneysWsGateway.emitSignUp(tourney.id, team);
       await this.removeTeams(tourney, user);
       //TODO: Alert that someone created a team and deleted their invites
@@ -336,15 +343,15 @@ export class TourneysService {
   async signOut(term: string, user: User, tourney?: Tourney) {
     if (!tourney) tourney = await this.findOne(term);
 
-    const tourneyTeamsQB = this.tourneysTeamsRepository.createQueryBuilder();
+    const tourneyTeamsQB = this.tourneySignUpsRepository.createQueryBuilder();
 
     const team = await tourneyTeamsQB
-      .leftJoinAndSelect('TourneysTeams.members', 'Members')
-      .leftJoinAndSelect('TourneysTeams.captain', 'Captain')
-      .leftJoinAndSelect('TourneysTeams.invited', 'invited')
+      .leftJoinAndSelect('TourneySignUps.members', 'Members')
+      .leftJoinAndSelect('TourneySignUps.captain', 'Captain')
+      .leftJoinAndSelect('TourneySignUps.invited', 'invited')
       .leftJoinAndSelect('invited.toUser', 'inviteToUser')
       .where(
-        'TourneysTeams.tourneyId=:tourneyId AND ( Captain.id=:captainId OR (TourneysTeams.verifiedInvites=true AND Members.twitchUsername=:username) OR (inviteToUser.twitchUsername=:username AND invited.accepted=true ))',
+        'TourneySignUps.tourneyId=:tourneyId AND ( Captain.id=:captainId OR (TourneySignUps.verifiedInvites=true AND Members.twitchUsername=:username) OR (inviteToUser.twitchUsername=:username AND invited.accepted=true ))',
         {
           tourneyId: tourney.id,
           captainId: user.id,
@@ -359,7 +366,7 @@ export class TourneysService {
       );
 
     try {
-      const response = await this.tourneysTeamsRepository.delete({
+      const response = await this.tourneySignUpsRepository.delete({
         id: team.id,
       });
       if (response.affected < 1)
@@ -438,7 +445,7 @@ export class TourneysService {
           (m) => m.twitchUsername !== user.twitchUsername,
         );
         await this.tourneysWsGateway.emitInviteDeny(invite.fromTeam);
-        await this.tourneysTeamsRepository.delete({ id: invite.fromTeam.id });
+        await this.tourneySignUpsRepository.delete({ id: invite.fromTeam.id });
         return {
           statusCode: 200,
           message: 'ok',
@@ -458,11 +465,13 @@ export class TourneysService {
     await this.removeTeams(invite.fromTeam.tourney, user);
     //TODO: Alert that someone created a team and deleted their invites
 
-    const [{ invited: teamInvites }] = await this.tourneysTeamsRepository.find({
-      where: { id: invite.fromTeam.id },
-      relations: { invited: true },
-      take: 1,
-    });
+    const [{ invited: teamInvites }] = await this.tourneySignUpsRepository.find(
+      {
+        where: { id: invite.fromTeam.id },
+        relations: { invited: true },
+        take: 1,
+      },
+    );
 
     let verifiedInvites = true;
     for (const invite of teamInvites) {
@@ -480,7 +489,7 @@ export class TourneysService {
     );
 
     if (verifiedInvites)
-      this.tourneysTeamsRepository.update(invite.fromTeam.id, {
+      this.tourneySignUpsRepository.update(invite.fromTeam.id, {
         verifiedInvites,
       });
 
@@ -504,6 +513,67 @@ export class TourneysService {
       .getMany();
   }
 
+  async randomizeSignUps(
+    id: string,
+    randomizeSignUpsDto: RandomizeSignUpsDto,
+    user: User,
+  ) {
+    const fuseQ = randomizeSignUpsDto.toFuseQuant;
+    const tourney = await this.tourneyRepository
+      .createQueryBuilder()
+      .select(['Tourney.tiered', 'Tourney.id'])
+      .leftJoinAndSelect('Tourney.signUps', 'signUps')
+      .leftJoinAndSelect('signUps.captain', 'captain')
+      .leftJoinAndSelect('signUps.members', 'members')
+      .where('Tourney.id=:id', { id })
+      .getOne();
+
+    if (tourney.signUps.length < fuseQ) {
+      throw new BadRequestException(`Not enough people to fuse ${fuseQ} teams`);
+    }
+
+    if (!tourney.tiered) {
+      const randomSignUps: TourneySignUps[] = [];
+
+      const signUpsQ = tourney.signUps.length;
+      for (let i = 0; i < signUpsQ; i++) {
+        const random = this.randomNumber(0, tourney.signUps.length);
+        const [toPush] = tourney.signUps.splice(random, 1);
+        randomSignUps.push(toPush);
+      }
+
+      delete tourney.signUps;
+      const randomTeams: TourneyTeams[] = [];
+      for (let i = 0; i < signUpsQ / fuseQ; i++) {
+        const team = this.tourneyTeamsRepository.create({
+          tourney: tourney,
+          members: [],
+        });
+
+        for (let j = 0; j < fuseQ; j++) {
+          const random = this.randomNumber(0, randomSignUps.length);
+          const [currentFuse] = randomSignUps.splice(random, 1);
+          if (!team.captain) team.captain = currentFuse.captain;
+          if (currentFuse)
+            team.members = [...team.members, ...currentFuse.members];
+        }
+
+        randomTeams.push(team);
+      }
+
+      await this.tourneyTeamsRepository
+        .createQueryBuilder()
+        .delete()
+        .where('tourneyId=:tourneyId', { tourneyId: tourney.id })
+        .execute();
+      await this.tourneyTeamsRepository.save(randomTeams);
+      await this.tourneysWsGateway.emitRandomTeams(tourney.id, randomTeams);
+      return { randomTeams };
+    }
+
+    //Tiered tourney
+  }
+
   private handleDBError(error: any) {
     if (error.code == '23505') throw new BadRequestException(error.detail);
     if (error.response?.statusCode === 400)
@@ -515,13 +585,13 @@ export class TourneysService {
   }
 
   private async removeTeams(tourney: Tourney, user: User) {
-    const pendingTeams = await this.tourneysTeamsRepository
+    const pendingTeams = await this.tourneySignUpsRepository
       .createQueryBuilder()
-      .leftJoinAndSelect('TourneysTeams.invited', 'Invites')
-      .leftJoinAndSelect('TourneysTeams.captain', 'Captain')
-      .leftJoinAndSelect('TourneysTeams.members', 'Members')
+      .leftJoinAndSelect('TourneySignUps.invited', 'Invites')
+      .leftJoinAndSelect('TourneySignUps.captain', 'Captain')
+      .leftJoinAndSelect('TourneySignUps.members', 'Members')
       .where(
-        'TourneysTeams.tourneyId=:tourneyId AND Invites.toUser=:userId AND Invites.accepted IS NULL',
+        'TourneySignUps.tourneyId=:tourneyId AND Invites.toUser=:userId AND Invites.accepted IS NULL',
         {
           tourneyId: tourney.id,
           userId: user.id,
@@ -538,7 +608,7 @@ export class TourneysService {
           { type: 'alert', tourney: tourney.slug },
         );
       }
-      await this.tourneysTeamsRepository.remove(pendingTeams);
+      await this.tourneySignUpsRepository.remove(pendingTeams);
       //TODO: Emit to every member about removing the invites
     }
   }
@@ -567,5 +637,9 @@ export class TourneysService {
     const noDups = new Set(a);
 
     return a.length !== noDups.size;
+  }
+
+  private randomNumber(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min) + min);
   }
 }

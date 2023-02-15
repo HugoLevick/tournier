@@ -69,6 +69,24 @@ function connectToTourneyWs() {
       tourney.signUps.splice(index, 1);
   });
 
+  socket.on('random-t-' + tourney.id, (randomTeams) => {
+    tourney.teams = randomTeams;
+    if (document.querySelector('.teams-table')) showTeams();
+    Toastify({
+      text: 'Teams have been updated!',
+      duration: 3000,
+      gravity: 'top', // `top` or `bottom`
+      position: 'center', // `left`, `center` or `right`
+      stopOnFocus: false, // Prevents dismissing of toast on hover
+      style: {
+        background: 'var(--darker-background)',
+        boxShadow: 'unset',
+        border: '1px var(--secondary) solid',
+      },
+      onClick: showTeams, // Callback after click
+    }).showToast();
+  });
+
   socket.on('inv-update-t-' + tourney.id, (invite) => {
     changeStatus(invite.toUser.twitchUsername);
   });

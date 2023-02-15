@@ -8,7 +8,9 @@ const mainGrid = document.querySelector('.main-content');
 const peopleLabel = document.getElementById('people-label');
 const teamsLabel = document.getElementById('teams-label');
 const infoLabel = document.getElementById('info-label');
-let peopleTable;
+let peopleTable,
+  teamsTable,
+  peoplePerTeamInput = 1;
 const clockIcon =
   '<path d="M232 120C232 106.7 242.7 96 256 96C269.3 96 280 106.7 280 120V243.2L365.3 300C376.3 307.4 379.3 322.3 371.1 333.3C364.6 344.3 349.7 347.3 338.7 339.1L242.7 275.1C236 271.5 232 264 232 255.1L232 120zM256 0C397.4 0 512 114.6 512 256C512 397.4 397.4 512 256 512C114.6 512 0 397.4 0 256C0 114.6 114.6 0 256 0zM48 256C48 370.9 141.1 464 256 464C370.9 464 464 370.9 464 256C464 141.1 370.9 48 256 48C141.1 48 48 141.1 48 256z"/>';
 const checkIcon =
@@ -34,12 +36,14 @@ const signUpTeamHtml = `
   </div>
 `;
 
-async function showPeople() {
-  peopleLabel.classList.add('active');
-  teamsLabel.classList.remove('active');
-  infoLabel.classList.remove('active');
-  if (tourney.peoplePerTeam === 1) {
-    mainGrid.innerHTML = `<input class="player-search-bar" placeholder="Search..." />
+async function showPeople(filter) {
+  let displayTeams;
+  if (filter === undefined) {
+    peopleLabel.classList.add('active');
+    teamsLabel.classList.remove('active');
+    infoLabel.classList.remove('active');
+    if (tourney.peoplePerTeam === 1) {
+      mainGrid.innerHTML = `<input class="player-search-bar" placeholder="Search..." oninput="showPeople(this.value)"/>
           <div class="player-table">
             <div class="player-trow h5">
               <div class="container-center">Username</div>
@@ -47,34 +51,133 @@ async function showPeople() {
               <div class="container-center">Gamertag</div>
             </div>
           </div>`;
-  } else {
-    mainGrid.innerHTML = `<input class="player-search-bar" placeholder="Search..." />
+    } else {
+      mainGrid.innerHTML = `<input class="player-search-bar" placeholder="Search..." oninput="showPeople(this.value)"/>
           <div class="player-table">
             <div class="player-trow h5">
               <div class="container-center">Username</div>
               <div class="container-center">Tier</div>
             </div>
           </div>`;
-
+    }
     peopleTable = document.querySelector('.player-table');
+    if (tourney.signUps.length === 0) peopleTable.innerHTML += playerTablePH;
+    displayTeams = tourney.signUps;
+  } else {
+    filter = filter.replaceAll(/[\*\.\{\}]/g, '');
+    displayTeams = tourney.signUps.filter((team) => {
+      const filterRegExp = new RegExp(`.*${filter}.*`);
+      for (member of team.members) {
+        if (member.twitchUsername.match(filterRegExp)) return true;
+      }
+      return false;
+    });
+
+    resetPlayerTable();
   }
 
-  for (const team of tourney.signUps) {
+  for (const team of displayTeams) {
     addNewSignup(team);
   }
 }
 
-function showTeams() {
-  peopleLabel.classList.remove('active');
-  teamsLabel.classList.add('active');
-  infoLabel.classList.remove('active');
-  mainGrid.innerHTML = `
+function resetPlayerTable() {
+  if (tourney.peoplePerTeam === 1) {
+    peopleTable.innerHTML = `
+          <div class="player-table">
+            <div class="player-trow h5">
+              <div class="container-center">Username</div>
+              <div class="container-center">Tier</div>
+              <div class="container-center">Gamertag</div>
+            </div>`;
+  } else {
+    peopleTable.innerHTML = `
+          <div class="player-table">
+            <div class="player-trow h5">
+              <div class="container-center">Username</div>
+              <div class="container-center">Tier</div>
+            </div>`;
+  }
+}
+
+function showTeams(filter) {
+  if (!filter) {
+    peopleLabel.classList.remove('active');
+    teamsLabel.classList.add('active');
+    infoLabel.classList.remove('active');
+    mainGrid.innerHTML = `
     <input class="player-search-bar" placeholder="Search..." />
-    <div class="team-table">
+    <div class="teams-table">
       <div class="player-trow h5">
-        <div class="container-center">Captain</div>
+        <div class="container-center">Teams</div>
+        ${
+          tourney.creator.twitchUsername === user?.twitchUsername ||
+          ['OWNER', 'ADMIN'].includes(user?.role)
+            ? `<div class="container-center ppt-group">Fuse teams: <input type="text" inputmode="numeric" value=${peoplePerTeamInput} id="ppt-inp" onkeydown="if(event.keyCode == 13) document.querySelector('.rnd-teams-btn').click()" ></div><button class="btn rnd-teams-btn" onclick="randomizeTeams(this)">Randomize</button>`
+            : ''
+        }
       </div>
     </div>`;
+    teamsTable = document.querySelector('.teams-table');
+  }
+
+  for (const team of tourney.teams) {
+    teamsTable.innerHTML += getRandomTeamHtml(team);
+  }
+}
+
+async function randomizeTeams(button) {
+  const input = document.getElementById('ppt-inp');
+  if (!input) return;
+  const peoplePerTeam = parseInt(input.value);
+  if (isNaN(peoplePerTeam)) return;
+
+  if (peoplePerTeam > tourney.signUps.length) {
+    Alert.fire({
+      title: 'Not enough sign ups',
+      icon: 'error',
+      allowEnterKey: false,
+    });
+    return;
+  }
+
+  if (tourney.signUps.length % peoplePerTeam !== 0) {
+    const alertResponse = await Alert.fire({
+      title: 'A team will not be full, continue?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes',
+      allowEnterKey: false,
+    });
+
+    if (!alertResponse.isConfirmed) return;
+  }
+  peoplePerTeamInput = peoplePerTeam;
+  button.disabled = true;
+  button.innerHTML = getSpinnerHtml(2.4);
+
+  const body = {
+    toFuseQuant: peoplePerTeam,
+  };
+
+  response = await fetch(`/api/tourneys/${tourney.id}/randomize`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+    headers: {
+      Authorization: 'Bearer ' + jwt,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const json = await response.json();
+    Alert.fire('Whoops!', 'Something unexpected happened', 'error');
+    console.log(json);
+  } else {
+  }
+
+  button.disabled = false;
+  button.innerHTML = 'Randomize';
 }
 
 function showInfo() {
@@ -133,15 +236,19 @@ function getTeamHtml(team) {
     return `
       <div class="player-trow" id="${team.id}">
         <div class="container-center">
-          <div
-            class="player-table-pfp"
-            style="background-image: url('${player.twitchProfileImageUrl.replaceAll(
-              '300',
-              '50',
-            )}');"
-          >
+          <div class="main-content-player">
+            <div
+              class="player-table-pfp"
+              style="background-image: url('${player.twitchProfileImageUrl.replaceAll(
+                '300',
+                '50',
+              )}');"
+            >
+            </div>
+            <div>
+              ${player.twitchUsername}
+            </div>
           </div>
-          ${player.twitchUsername}
         </div>
         <div class="container-center">${
           tourney.tiered ? team.tier : 'N/A'
@@ -151,10 +258,12 @@ function getTeamHtml(team) {
     `;
   } else {
     const player = team.captain;
+    //prettier-ignore
     return `
     <div id="${team.id}">
       <div class="player-trow collapsible" onclick="displayCollapsible(this)">
-        <div class="container-center">
+        <div class="main-content-player">
+
           <div
             class="player-table-pfp"
             style="background-image: url('${player.twitchProfileImageUrl.replaceAll(
@@ -163,13 +272,19 @@ function getTeamHtml(team) {
             )}');"
           >
           </div>
-          ${
-            player.twitchUsername
-          }'s team &nbsp;&nbsp;<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm secondary-icon"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></svg>
+
+          <div class="container-center" style="gap: 1rem;">
+            <span>${
+              player.twitchUsername
+            }'s team</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm secondary-icon"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></svg>
+          </div>
+
         </div>
+
         <div class="container-center">${
           tourney.tiered ? team.tier : 'N/A'
         }</div>
+
         <div class="container-center">Coming soon</div>
       </div>
 
@@ -194,7 +309,7 @@ function getTeamMembersHtml(members = [], invites = [], size) {
     }
     html += `
       <div class="table-team">
-        <div class="container-center">
+        <div class="main-content-player" style="max-width:40%">
           <div
             class="player-table-pfp"
             style="background-image: url('${m.twitchProfileImageUrl.replaceAll(
@@ -207,12 +322,48 @@ function getTeamMembersHtml(members = [], invites = [], size) {
           } ${invHtml}</div>
         </div>
 
-        ${size === 'compact' ? '' : '<div>Gamertag</div>'}
+        ${
+          size === 'compact'
+            ? ''
+            : '<div class="container-center">Gamertag</div>'
+        }
       </div>
     `;
   }
 
   return html;
+}
+
+function getRandomTeamHtml(team) {
+  const player = team.captain;
+  //prettier-ignore
+  return `
+    <div id="${team.id}">
+      <div class="player-trow collapsible" onclick="displayCollapsible(this)">
+        <div class="main-content-player">
+
+          <div
+            class="player-table-pfp"
+            style="background-image: url('${player.twitchProfileImageUrl.replaceAll(
+              '300',
+              '50',
+            )}');"
+          >
+          </div>
+
+          <div class="container-center" style="gap: 1rem;">
+            <span>${
+              player.twitchUsername
+            }'s team</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm secondary-icon"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></svg>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="team-collapsible collapsible-content" style="max-height: 100rem">
+        ${getTeamMembersHtml(team.members, team.invited)}
+    </div
+    `;
 }
 
 async function signUp() {

@@ -81,6 +81,12 @@ a:visited {
     justify-content: center;
 }
 
+.container-left {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
 .fa-icon-sm, .fa-icon-m, .fa-icon-l {
     fill: var(--primary);
     display: flex;
@@ -158,6 +164,10 @@ a:visited {
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.2s ease-out;
+}
+
+.open-collapsible {
+    max-height: unset;
 }
 
 /* Main */
@@ -361,7 +371,7 @@ main {
     font-size: 1.6rem;
 }
 
-.sign-up-button {
+.sign-up-button, .btn {
     border: unset;
     color: white;
     font-weight: bold;
@@ -413,7 +423,7 @@ main {
     overflow: auto;
 }
 
-.player-search-bar {
+.player-search-bar, input {
     width: 100%;
     height: 3.5rem;
     background-color: var(--background);
@@ -421,18 +431,40 @@ main {
     color: white;
 }
 
-.player-table {
+.player-table, .teams-table {
     display: grid;
     gap: 1rem;
 }
 
-.player-table > *:first-child{
+.player-table > *:first-child, .teams-table>*:first-child{
     background-color: var(--background);
+}
+
+.ppt-group {
+    font-size: 2rem;
+}
+
+.ppt-group input {
+    width: 3rem;
+    border: 1px var(--secondary) solid;
+}
+
+.rnd-teams-btn {
+    font-size: 1.5rem;
+    display: inline-block;
+    align-self: center;
+    justify-self: center;
+    width: auto
 }
 
 .player-trow {
     display: grid;
     grid-template-columns: 2fr 1fr 2fr;
+}
+
+.player-table > *.player-trow:first-child > *:first-child{
+    justify-self: left;
+    margin-left: 6rem;
 }
 
 .player-table-pfp {
@@ -445,6 +477,21 @@ main {
     background-position: center center;
 }
 
+.main-content-player {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 40px auto;
+}
+
+.main-content-player > *:first-child{
+    justify-self: right;
+}
+
+.main-content-player>*:nth-child(2) {
+    margin-left: 2rem;
+    justify-self: left;
+}
+
 .team-collapsible {
     display: flex;
     flex-direction: column;   
@@ -453,8 +500,13 @@ main {
 .table-team {
     display: flex;
     align-items: center;
-    justify-content: space-evenly;
+    justify-content: space-between;
     margin: 0.5rem 0;
+    padding: 0 20%;
+}
+
+.random-team {
+    background-color: var(--darker-background);
 }
 
 .ad1 {

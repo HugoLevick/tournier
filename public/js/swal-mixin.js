@@ -44,6 +44,7 @@ const Alert = Swal.mixin({
     title: 'h5',
     confirmButton: 'sign-up-confirm',
   },
+  reverseButtons: true,
   showConfirmButton: true,
   confirmButtonColor: '#ae7a08',
   showCloseButton: true,

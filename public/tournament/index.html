@@ -112,7 +112,7 @@
           id="people-label"
           onclick="showPeople()"
         >
-          PEOPLE
+          SIGN-UPS
         </div>
         <div
           class="tournament_teams container-center"
@@ -130,7 +130,11 @@
         </div>
       </div>
       <div class="main-content">
-        <input class="player-search-bar" placeholder="Search..." />
+        <input
+          class="player-search-bar"
+          placeholder="Search..."
+          oninput="showPeople(this.value)"
+        />
         <div class="player-table">
           <div class="player-trow h5">
             <div class="container-center">Username</div>

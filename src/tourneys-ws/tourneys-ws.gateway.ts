@@ -62,4 +62,8 @@ export class TourneysWsGateway
       });
     }
   }
+
+  async emitRandomTeams(tourneyId: string, randomTeams: any[]) {
+    this.wss.emit(`random-t-${tourneyId}`, randomTeams);
+  }
 }
