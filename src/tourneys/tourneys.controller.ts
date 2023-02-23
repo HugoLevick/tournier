@@ -93,6 +93,12 @@ export class TourneysController {
     return this.tourneysService.signOutAdmin(term, user, tourneyPersonDto);
   }
 
+  @Auth(UserRoles.creator, UserRoles.admin)
+  @Patch(':term/togglecheckins')
+  toggleCheckIns(@Param('term') term: string, @GetUser() user: User) {
+    return this.tourneysService.toggleCheckins(term, user);
+  }
+
   @Auth()
   @Patch(':term/invite')
   inviteResponse(

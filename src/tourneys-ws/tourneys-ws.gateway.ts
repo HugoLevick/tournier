@@ -10,6 +10,7 @@ import { TourneyInvites } from '../tourneys/entities/tourney-invites.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { AlertsWsGateway } from '../alerts-ws/alerts-ws.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
+import { TourneyTeams } from '../tourneys/entities/tourney-teams.entity';
 
 @WebSocketGateway({ namespace: '/tourneys' })
 export class TourneysWsGateway
@@ -65,5 +66,13 @@ export class TourneysWsGateway
 
   async emitRandomTeams(tourneyId: string, randomTeams: any[]) {
     this.wss.emit(`random-t-${tourneyId}`, randomTeams);
+  }
+
+  async emitCheckInsToggle(tourneyId: string, allowCheckIns: boolean) {
+    this.wss.emit(`toggle-check-t-${tourneyId}`, allowCheckIns);
+  }
+
+  emitSignUpUpdate(tourneyId: string, signUp: TourneySignUps) {
+    this.wss.emit(`signUp-update-t-${tourneyId}`, signUp);
   }
 }

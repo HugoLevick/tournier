@@ -81,6 +81,10 @@ a:visited {
     justify-content: center;
 }
 
+.gap-1 {
+    gap: 1rem;
+}
+
 .container-left {
     display: flex;
     align-items: flex-start;
@@ -115,6 +119,14 @@ a:visited {
     fill: var(--green)
 }
 
+.white-icon {
+    fill: white;
+}
+
+.red-icon {
+    fill: rgb(206, 48, 21);
+}
+
 .square-spinner {
     color: var(--secondary);
 }
@@ -123,6 +135,14 @@ a:visited {
     border-radius: 50%;
     border: 2px var(--primary) solid;
     padding: 8px;
+}
+
+.secondary-border {
+    border: 1px var(--secondary) solid;
+}
+
+.no-style {
+    all: unset;
 }
 
 /* Nav */
@@ -371,6 +391,10 @@ main {
     font-size: 1.6rem;
 }
 
+.check-in-btn {
+    background-color: var(--green);
+}
+
 .sign-up-button, .btn {
     border: unset;
     color: white;
@@ -378,7 +402,15 @@ main {
     border-radius: 0.4rem;
     cursor: pointer;
     padding: 1rem 1.5rem;
+    background-color: unset;
+}
+
+.primary-btn {
     background-color: var(--primary);
+}
+
+.green-btn {
+    background-color: var(--green);
 }
 
 .sign-up-button:disabled {
@@ -431,12 +463,16 @@ main {
     color: white;
 }
 
-.player-table, .teams-table {
+.player-tbody, .teams-table {
     display: grid;
     gap: 1rem;
 }
 
-.player-table > *:first-child, .teams-table>*:first-child{
+.player-thead {
+    margin-bottom: 1rem;
+}
+
+.player-thead> *{
     background-color: var(--background);
 }
 
@@ -462,7 +498,7 @@ main {
     grid-template-columns: 2fr 1fr 2fr;
 }
 
-.player-table > *.player-trow:first-child > *:first-child{
+.player-thead > *.player-trow:first-child > *:first-child{
     justify-self: left;
     margin-left: 6rem;
 }
@@ -470,11 +506,12 @@ main {
 .player-table-pfp {
     border-radius: 50%;
     aspect-ratio: 1/1;
-    width: 24px;
-    margin-right: 1rem;
+    width: 26px;
+    
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center center;
+    align-self: center;
 }
 
 .main-content-player {
@@ -490,6 +527,23 @@ main {
 .main-content-player>*:nth-child(2) {
     margin-left: 2rem;
     justify-self: left;
+}
+
+.tier-control {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+}
+
+.tier-control .spinner {
+    position: absolute;
+    right: 10px;
+    top: 3px;
+}
+
+.tier-control svg {
+    cursor: pointer;
+    
 }
 
 .team-collapsible {

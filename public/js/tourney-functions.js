@@ -36,68 +36,85 @@ const signUpTeamHtml = `
   </div>
 `;
 
-async function showPeople(filter) {
+const checkInButtonHtml = `
+  <button class="btn green-btn check-in-btn" onclick="checkIn()">
+    Check In
+  </button>
+`;
+
+function isPrivileged() {
+  return (
+    tourney.creator.id === user?.id || ['OWNER', 'ADMIN'].includes(user?.role)
+  );
+}
+
+async function showPeople(filterResults = false) {
   let displayTeams;
-  if (filter === undefined) {
+  if (filterResults === false) {
     peopleLabel.classList.add('active');
     teamsLabel.classList.remove('active');
     infoLabel.classList.remove('active');
     if (tourney.peoplePerTeam === 1) {
-      mainGrid.innerHTML = `<input class="player-search-bar" placeholder="Search..." oninput="showPeople(this.value)"/>
-          <div class="player-table">
-            <div class="player-trow h5">
-              <div class="container-center">Username</div>
-              <div class="container-center">Tier</div>
-              <div class="container-center">Gamertag</div>
-            </div>
-          </div>`;
+      mainGrid.innerHTML = `
+      <input class="player-search-bar" placeholder="Search..." oninput="showPeople(true)" id="username-filter"/>
+      <div class="player-thead">
+        <div class="player-trow h5">
+          <div class="container-center">Username</div>
+          <div class="container-center">
+            Tier&nbsp;  
+            <input class="secondary-border" id="tier-filter" type="text" inputmode="numeric" value=0 style="width: 3rem" oninput="showPeople(true)">
+          </div>
+          <div class="container-center">Actions</div>
+        </div>
+      </div>
+      <div class="player-tbody"></div>`;
     } else {
-      mainGrid.innerHTML = `<input class="player-search-bar" placeholder="Search..." oninput="showPeople(this.value)"/>
-          <div class="player-table">
-            <div class="player-trow h5">
-              <div class="container-center">Username</div>
-              <div class="container-center">Tier</div>
-            </div>
-          </div>`;
+      mainGrid.innerHTML = `
+      <input class="player-search-bar" placeholder="Search..." oninput="showPeople(true)" id="username-filter"/>
+      <div class="player-thead">
+        <div class="player-trow h5">
+          <div class="container-center">Username</div>
+          <div class="container-center">
+            Tier&nbsp;
+            <input class="secondary-border" id="tier-filter" type="text" inputmode="numeric" value=0 style="width: 3rem" oninput="showPeople(true)">
+          </div>
+        </div>
+      </div>
+      <div class="player-tbody"></div>`;
     }
-    peopleTable = document.querySelector('.player-table');
+    peopleTable = document.querySelector('.player-tbody');
     if (tourney.signUps.length === 0) peopleTable.innerHTML += playerTablePH;
     displayTeams = tourney.signUps;
   } else {
-    filter = filter.replaceAll(/[\*\.\{\}]/g, '');
+    const usernameFilter = document
+      .getElementById('username-filter')
+      .value.replaceAll(/[\*\.\{\}]/g, '');
+    const tierFilter = parseInt(document.getElementById('tier-filter').value);
+
     displayTeams = tourney.signUps.filter((team) => {
-      const filterRegExp = new RegExp(`.*${filter}.*`);
+      let passedUFilter, passedTFilter;
+      const filterRegExp = new RegExp(`.*${usernameFilter}.*`);
+
+      if (team.tier == (tierFilter || team.tier)) passedTFilter = true;
+
       for (member of team.members) {
-        if (member.twitchUsername.match(filterRegExp)) return true;
+        if (member.twitchUsername.match(filterRegExp)) passedUFilter = true;
       }
-      return false;
+
+      return passedTFilter && passedUFilter;
     });
 
     resetPlayerTable();
   }
 
+  if (displayTeams.length === 0) peopleTable.innerHTML += playerTablePH;
   for (const team of displayTeams) {
     addNewSignup(team);
   }
 }
 
 function resetPlayerTable() {
-  if (tourney.peoplePerTeam === 1) {
-    peopleTable.innerHTML = `
-          <div class="player-table">
-            <div class="player-trow h5">
-              <div class="container-center">Username</div>
-              <div class="container-center">Tier</div>
-              <div class="container-center">Gamertag</div>
-            </div>`;
-  } else {
-    peopleTable.innerHTML = `
-          <div class="player-table">
-            <div class="player-trow h5">
-              <div class="container-center">Username</div>
-              <div class="container-center">Tier</div>
-            </div>`;
-  }
+  peopleTable.innerHTML = '';
 }
 
 function showTeams(filter) {
@@ -184,7 +201,32 @@ function showInfo() {
   peopleLabel.classList.remove('active');
   teamsLabel.classList.remove('active');
   infoLabel.classList.add('active');
-  mainGrid.innerHTML = 'uwu';
+  if (tourney.creator.id === user.id)
+    mainGrid.innerHTML = `
+    <button class="btn primary-btn" onclick="toggleCheckIns()">Toggle Check-Ins</button>
+    `;
+  else mainGrid.innerHTML = 'uwu';
+}
+
+async function toggleCheckIns() {
+  response = await fetch(`/api/tourneys/${tourney.id}/togglecheckins`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: 'Bearer ' + jwt,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const json = await response.json();
+    Alert.fire('Whoops!', 'Something unexpected happened', 'error');
+    console.log(json);
+    return;
+  }
+
+  const allowCheckIns = await response.json();
+  tourney.allowCheckIns = allowCheckIns;
+  showPeople();
 }
 
 function addSignUpHtml(player, captain = false) {
@@ -234,7 +276,7 @@ function getTeamHtml(team) {
   if (team.members.length === 1) {
     const player = team.captain;
     return `
-      <div class="player-trow" id="${team.id}">
+      <div class="player-trow" id="su-${team.id}">
         <div class="container-center">
           <div class="main-content-player">
             <div
@@ -245,24 +287,37 @@ function getTeamHtml(team) {
               )}');"
             >
             </div>
-            <div>
-              ${player.twitchUsername}
+            <div class="container-center">
+            ${
+              team.isCheckedIn
+                ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm green-icon" style="margin-right: 0.5rem"><!--! Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M470.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L192 338.7 425.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>`
+                : ''
+            }
+            ${player.twitchUsername}
             </div>
           </div>
         </div>
-        <div class="container-center">${
-          tourney.tiered ? team.tier : 'N/A'
-        }</div>
-        <div class="container-center">Coming soon</div>
+        <div class="container-center tier-control">
+        ${
+          tourney.tiered
+            ? isPrivileged()
+              ? getTierHtml(team.tier, team.id)
+              : team.tier
+            : 'N/A'
+        }
+        </div>
+        <div class="container-center actions">
+          ${isPrivileged() ? getActionsHtml(team) : 'Coming Soon'}
+        </div>
       </div>
     `;
   } else {
     const player = team.captain;
     //prettier-ignore
     return `
-    <div id="${team.id}">
-      <div class="player-trow collapsible" onclick="displayCollapsible(this)">
-        <div class="main-content-player">
+    <div id="su-${team.id}">
+      <div class="player-trow">
+        <div class="main-content-player collapsible" onclick="displayCollapsible(this.parentElement)">
 
           <div
             class="player-table-pfp"
@@ -274,24 +329,103 @@ function getTeamHtml(team) {
           </div>
 
           <div class="container-center" style="gap: 1rem;">
-            <span>${
-              player.twitchUsername
-            }'s team</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm secondary-icon"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></svg>
+          <span class="container-center">
+            ${
+              team.isCheckedIn
+                ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm green-icon" style="margin-right: 0.5rem"><!--! Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M470.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L192 338.7 425.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>`
+                : !team.verifiedInvites
+                ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm white-icon" style="margin-right: 0.5rem">${clockIcon}</svg>`
+                : ''
+            }
+            ${player.twitchUsername}'s team
+            </span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm secondary-icon"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></svg>
           </div>
 
         </div>
 
-        <div class="container-center">${
-          tourney.tiered ? team.tier : 'N/A'
+        <div class="container-center tier-control">${
+          tourney.tiered
+            ? isPrivileged()
+              ? getTierHtml(team.tier, team.id)
+              : team.tier
+            : 'N/A'
         }</div>
 
-        <div class="container-center">Coming soon</div>
+        <div class="container-center actions">${
+          isPrivileged() ? getActionsHtml(team) : 'Coming Soon'
+        }</div>
       </div>
 
       <div class="team-collapsible collapsible-content">
         ${getTeamMembersHtml(team.members, team.invited)}
     </div
     `;
+  }
+}
+
+function getTierHtml(tier, id) {
+  return `${tier} <button onclick="updateTier(${id}, 1)" class="no-style"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" class="fa-icon-m"><!--! Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M182.6 137.4c-12.5-12.5-32.8-12.5-45.3 0l-128 128c-9.2 9.2-11.9 22.9-6.9 34.9s16.6 19.8 29.6 19.8H288c12.9 0 24.6-7.8 29.6-19.8s2.2-25.7-6.9-34.9l-128-128z"/></svg></button>
+  
+  <button onclick="updateTier(${id}, -1)" class="no-style"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" class="fa-icon-m"><!--! Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"/></svg></button>`;
+}
+
+function getActionsHtml(team) {
+  return `
+    <!-- Check button -->
+    <button class="btn" onclick="checkIn(${team.id})">
+      ${
+        team.isCheckedIn
+          ? //Check In icon
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" class="fa-icon-sm red-icon"><!--! Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M376.6 84.5c11.3-13.6 9.5-33.8-4.1-45.1s-33.8-9.5-45.1 4.1L192 206 56.6 43.5C45.3 29.9 25.1 28.1 11.5 39.4S-3.9 70.9 7.4 84.5L150.3 256 7.4 427.5c-11.3 13.6-9.5 33.8 4.1 45.1s33.8 9.5 45.1-4.1L192 306 327.4 468.5c11.3 13.6 31.5 15.4 45.1 4.1s15.4-31.5 4.1-45.1L233.7 256 376.6 84.5z"/></svg>'
+          : //Check Out icon
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm green-icon" style="height: auto"><!--! Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M470.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L192 338.7 425.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>'
+      }
+    </button>
+    
+    <!-- Kick button -->
+    <button class="btn" onclick="kick('${team.captain.twitchUsername}')">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" class="fa-icon-sm white-icon" style="height: auto"><!--! Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3zM472 200H616c13.3 0 24 10.7 24 24s-10.7 24-24 24H472c-13.3 0-24-10.7-24-24s10.7-24 24-24z"/></svg>
+    </button>
+    `;
+}
+
+async function updateTier(teamId, value) {
+  const signUpHtml = document.querySelector(`#su-${teamId} .tier-control`);
+  const spinner = document.querySelector(
+    `#su-${teamId} .tier-control .spinner`,
+  );
+
+  const team = tourney.signUps.find((t) => t.id === teamId);
+
+  if (!team) return;
+  if (!spinner) signUpHtml.innerHTML += getSpinnerHtml(2);
+
+  team.tier = +team.tier;
+  const newTier = team.tier + value < 0 ? 0 : team.tier + value;
+
+  const body = {
+    tier: newTier,
+  };
+
+  const response = await fetch(`/api/signups/${teamId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+    headers: {
+      Authorization: 'Bearer ' + jwt,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  signUpHtml.removeChild(signUpHtml.lastChild);
+}
+
+function updateSignUpHtml(newSignUp) {
+  const html = document.getElementById(`su-${newSignUp.id}`);
+  if (html) {
+    const newHtml = getTeamHtml(newSignUp);
+
+    html.outerHTML = newHtml;
   }
 }
 
@@ -309,7 +443,7 @@ function getTeamMembersHtml(members = [], invites = [], size) {
     }
     html += `
       <div class="table-team">
-        <div class="main-content-player" style="max-width:40%">
+        <div class="main-content-player">
           <div
             class="player-table-pfp"
             style="background-image: url('${m.twitchProfileImageUrl.replaceAll(
@@ -418,9 +552,12 @@ async function signUp() {
     }
   }
   signUpButton.disabled = false;
+  if (tourney.allowCheckIns) showCheckInButton();
 }
 
 async function signOut() {
+  signUpButton.disabled = true;
+  hideCheckInButton();
   let response = await fetch(`/api/tourneys/${tourney.id}/signout`, {
     method: 'DELETE',
     headers: {
@@ -440,6 +577,52 @@ async function signOut() {
       default:
         Alert.fire('Whoops!', json.message, 'error');
     }
+  }
+
+  signUpButton.disabled = false;
+}
+
+async function checkIn(teamId) {
+  const signUpToCheck = getTourneySignUp();
+  if (!signUpToCheck && !teamId) throw new Error('SignUp not found');
+
+  response = await fetch(
+    `/api/signups/${teamId ? teamId : signUpToCheck.id}/checkin`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: 'Bearer ' + jwt,
+      },
+    },
+  );
+
+  if (response.ok) {
+    Alert.fire('Success!', 'You checked in!', 'success');
+    hideCheckInButton();
+  } else {
+    response = await response.json();
+    Alert.fire('Whoops!', response.message, 'error');
+  }
+}
+
+async function kick(twitchUsername) {
+  const body = {
+    twitchUsername,
+  };
+  response = await fetch(`/api/tourneys/${tourney.id}/signout-admin`, {
+    method: 'DELETE',
+    body: JSON.stringify(body),
+    headers: {
+      Authorization: 'Bearer ' + jwt,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (response.ok) {
+    Alert.fire('Success!', `${twitchUsername} was kicked!`, 'success');
+  } else {
+    response = await response.json();
+    Alert.fire('Whoops!', response.message, 'error');
   }
 }
 
@@ -470,6 +653,7 @@ async function doneTyping() {
 
 async function addNewSignup(team) {
   const placeholder = document.getElementById('player-table-placeholder');
+  console.log(team);
   const acceptedInvite = team.invited.filter((inv) => {
     return inv.accepted && inv.toUser.twitchUsername === user.twitchUsername;
   });
@@ -487,12 +671,15 @@ async function addNewSignup(team) {
 }
 
 function removeSignUp(team) {
-  if (team.captain?.id === user?.id || isInTeamMembers(user?.id, team))
+  if (team.captain?.id === user?.id || isInTeamMembers(user?.id, team)) {
+    hideCheckInButton();
     setSignUpButton();
+  }
   const teamElement = teamInDocument(team.id);
   teamElement?.remove();
 }
 
+//! TODO:Change status ya no sirve, combinar con updateSIgnUp
 function changeStatus(username) {
   if (username === user?.twitchUsername) setSignOutButton();
   const icon = document.getElementById(username + '-status');
@@ -533,6 +720,39 @@ function setSignUpButton() {
   signUpButton.setAttribute('onclick', 'signUp()');
 }
 
+function showCheckInButton() {
+  const signCheckDiv = document.getElementById('sign-check-div');
+  const divPlaceHolder = document.createElement('div');
+  divPlaceHolder.innerHTML = checkInButtonHtml;
+  const checkInBtn = divPlaceHolder.lastElementChild;
+  if (!user) {
+    checkInBtn.disabled = true;
+    return;
+  }
+
+  let isTeamCaptainCheckedOut = false;
+  for (team of tourney.signUps) {
+    if (
+      !team.isCheckedIn &&
+      team.captain.twitchUsername === user?.twitchUsername
+    )
+      isTeamCaptainCheckedOut = true;
+  }
+  if (isTeamCaptainCheckedOut) signCheckDiv.prepend(checkInBtn);
+}
+
+function hideCheckInButton() {
+  const checkInButton = document.querySelector('.check-in-btn');
+  if (checkInButton) checkInButton.remove();
+}
+
+function getTourneySignUp() {
+  const team = tourney.signUps.find(
+    (t) => t.captain.twitchUsername === user?.twitchUsername,
+  );
+  return team;
+}
+
 function isInTeamMembers(userId, team) {
   for (const member of team.members) {
     if (member.id === userId) return true;
@@ -541,5 +761,5 @@ function isInTeamMembers(userId, team) {
 }
 
 function teamInDocument(teamId) {
-  return document.getElementById(teamId);
+  return document.getElementById(`su-${teamId}`);
 }

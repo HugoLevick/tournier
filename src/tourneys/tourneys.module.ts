@@ -13,14 +13,17 @@ import { AlertsWsModule } from '../alerts-ws/alerts-ws.module';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TourneyTeams } from './entities/tourney-teams.entity';
+import { TourneySignUpsController } from './tourney-sign-ups.controller';
+import { TourneySignUpsService } from './tourney-sign-ups.service';
 
 @Module({
-  controllers: [TourneysController],
+  controllers: [TourneysController, TourneySignUpsController],
   providers: [
     TourneysService,
     AuthService,
     TourneysWsGateway,
     NotificationsService,
+    TourneySignUpsService,
   ],
   imports: [
     TypeOrmModule.forFeature([

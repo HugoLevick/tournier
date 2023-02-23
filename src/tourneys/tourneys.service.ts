@@ -186,13 +186,15 @@ export class TourneysService {
 
     let queryMembers = [user.twitchUsername, ...tourneySignUpDto.members];
     const inTeam = await checkInTourneyTeamQB
+      //Select teams where the querymembers are already in
       .select(['TourneySignUps'])
       .leftJoinAndSelect('TourneySignUps.members', 'Members')
       .leftJoinAndSelect('TourneySignUps.captain', 'Captain')
       .leftJoinAndSelect('TourneySignUps.invited', 'invited')
       .leftJoinAndSelect('invited.toUser', 'inviteToUser')
+      //Where Tourney is the one provided AND Captain is the user trying to create the team
       .where(
-        'TourneySignUps.tourneyId=:tourneyId AND (Captain.id=:captainId OR Captain.twitchUsername IN(:...members) OR (TourneySignUps.verifiedInvites=true AND Members.twitchUsername IN(:...members)) OR (inviteToUser.twitchUsername IN(:...members) AND invited.accepted=true ))',
+        'TourneySignUps.tourneyId=:tourneyId AND ((TourneySignUps.verifiedInvites=false AND Captain.twitchUsername IN(:...members)) OR (TourneySignUps.verifiedInvites=true AND Members.twitchUsername IN(:...members)) OR (TourneySignUps.verifiedInvites=false AND inviteToUser.twitchUsername IN(:...members) AND invited.accepted=true ))',
         {
           tourneyId: tourney.id,
           captainId: user.id,
@@ -207,7 +209,7 @@ export class TourneysService {
         queryMembers.includes(inTeam['Captain_twitchUsername'])
       )
         throw new BadRequestException(
-          `Player ${inTeam['Captain_twitchUsername']} is already in a team`,
+          `Player ${inTeam['Captain_twitchUsername']} is already in a team (captain)`,
         );
       else
         throw new BadRequestException(
@@ -406,6 +408,21 @@ export class TourneysService {
     return this.signOut(undefined, person, tourney);
   }
 
+  async toggleCheckins(term: string, user: User) {
+    const tourney = await this.findOne(term);
+
+    if (tourney.creator.id !== user.id) throw new UnauthorizedException();
+
+    const allowCheckIns = !tourney.allowCheckIns;
+
+    this.tourneyRepository.update(tourney.id, {
+      allowCheckIns,
+    });
+
+    this.tourneysWsGateway.emitCheckInsToggle(tourney.id, allowCheckIns);
+    return allowCheckIns;
+  }
+
   //! Could have some optimization to not query database that much
   async inviteResponse(inviteResponseDto: InviteResponseDto, user: User) {
     const tourneyInvitesQB = this.tourneyInvitesRepository.createQueryBuilder();
@@ -488,10 +505,19 @@ export class TourneysService {
       verifiedInvites,
     );
 
-    if (verifiedInvites)
-      this.tourneySignUpsRepository.update(invite.fromTeam.id, {
-        verifiedInvites,
-      });
+    if (verifiedInvites) {
+      invite.fromTeam.verifiedInvites = true;
+      this.tourneySignUpsRepository.save(invite.fromTeam);
+      this.tourneysWsGateway.emitSignUpUpdate(
+        invite.fromTeam.tourney.id,
+        invite.fromTeam,
+      );
+    }
+
+    this.tourneysWsGateway.emitSignUpUpdate(
+      invite.fromTeam.tourney.id,
+      invite.fromTeam,
+    );
 
     return {
       statusCode: 200,
@@ -572,6 +598,24 @@ export class TourneysService {
     }
 
     //Tiered tourney
+
+    const randomSignUps: TourneySignUps[] = [];
+
+    const signUpsQ = tourney.signUps.length;
+    for (let i = 0; i < signUpsQ; i++) {
+      const random = this.randomNumber(0, tourney.signUps.length);
+      const [toPush] = tourney.signUps.splice(random, 1);
+      randomSignUps.push(toPush);
+    }
+
+    await this.tourneyTeamsRepository
+      .createQueryBuilder()
+      .delete()
+      .where('tourneyId=:tourneyId', { tourneyId: tourney.id })
+      .execute();
+    await this.tourneyTeamsRepository.save(randomSignUps);
+    await this.tourneysWsGateway.emitRandomTeams(tourney.id, randomSignUps);
+    return { randomTeams: randomSignUps };
   }
 
   private handleDBError(error: any) {
@@ -620,8 +664,7 @@ export class TourneysService {
   }
 
   private isTourneyOwnerOrPrivileged(tourney: Tourney, user: User) {
-    if (tourney.creator.twitchId === user.twitchId || this.isPrivileged(user))
-      return true;
+    if (tourney.creator.id === user.id || this.isPrivileged(user)) return true;
     else return false;
   }
 

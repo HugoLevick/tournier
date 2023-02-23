@@ -47,6 +47,7 @@ async function getOneTourney(term) {
     },
   );
 
+  if (tourney.allowCheckIns) showCheckInButton();
   await showPeople();
 
   if (user) signUpButton.disabled = false;
@@ -54,6 +55,13 @@ async function getOneTourney(term) {
 
 function connectToTourneyWs() {
   const socket = io('/tourneys');
+
+  socket.on('signUp-update-t-' + tourney.id, (updatedTeam) => {
+    console.log(updatedTeam);
+    const index = tourney.signUps.findIndex((t) => t.id === updatedTeam.id);
+    tourney.signUps[index] = updatedTeam;
+    updateSignUpHtml(updatedTeam);
+  });
 
   socket.on('sign-up-t-' + tourney.id, (team) => {
     tourney.signUps.push(team);
@@ -87,8 +95,25 @@ function connectToTourneyWs() {
     }).showToast();
   });
 
-  socket.on('inv-update-t-' + tourney.id, (invite) => {
-    changeStatus(invite.toUser.twitchUsername);
+  socket.on('toggle-check-t-' + tourney.id, (allowCheckIns) => {
+    Toastify({
+      text: `Check-Ins are ${allowCheckIns ? 'enabled' : 'disabled'}!`,
+      duration: 3000,
+      close: true,
+      gravity: 'top', // `top` or `bottom`
+      position: 'center', // `left`, `center` or `right`
+      stopOnFocus: false, // Prevents dismissing of toast on hover
+      style: {
+        background: 'var(--darker-background)',
+        boxShadow: 'unset',
+        border: '1px var(--secondary) solid',
+      },
+    }).showToast();
+
+    tourney.allowCheckIns = allowCheckIns;
+
+    if (allowCheckIns) showCheckInButton();
+    else hideCheckInButton();
   });
 }
 
