@@ -149,10 +149,12 @@ export class AuthService {
       await this.update(user.id, { twitchUsername });
     }
 
-    if (!user.email && email) {
+    if (email && email !== user.email) {
       await this.update(user.id, { email });
     } else if (!user.email && !email) {
-      throw new UnauthorizedException('User not registered');
+      throw new UnauthorizedException(
+        'User not registered, please log in to Tournier.xyz to register',
+      );
     }
 
     if (code)
