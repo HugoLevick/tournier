@@ -37,9 +37,6 @@ export class CreateTourneyDto {
   @IsDateString()
   startTime: string;
 
-  @IsDateString()
-  endTime: string;
-
   @IsNumber()
   @Min(0)
   @Max(10000000)
