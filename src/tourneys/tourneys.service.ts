@@ -551,7 +551,7 @@ export class TourneysService {
       .leftJoinAndSelect('Tourney.signUps', 'signUps')
       .leftJoinAndSelect('signUps.captain', 'captain')
       .leftJoinAndSelect('signUps.members', 'members')
-      .where('Tourney.id=:id', { id })
+      .where('Tourney.id=:id AND signUps.isCheckedIn=true', { id })
       .getOne();
 
     if (tourney.signUps.length < fuseQ) {

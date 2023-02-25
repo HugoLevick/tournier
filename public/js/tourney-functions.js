@@ -8,6 +8,7 @@ const mainGrid = document.querySelector('.main-content');
 const peopleLabel = document.getElementById('people-label');
 const teamsLabel = document.getElementById('teams-label');
 const infoLabel = document.getElementById('info-label');
+let checkedIn = 0;
 let peopleTable,
   teamsTable,
   peoplePerTeamInput = 1;
@@ -41,6 +42,16 @@ const checkInButtonHtml = `
     Check In
   </button>
 `;
+
+function updateSignUpsNumbers() {
+  const checkedHtml = document.getElementById('checked-in-number');
+  const signedHtml = document.getElementById('signed-up-number');
+
+  const checked = tourney.signUps.filter((t) => t.isCheckedIn);
+  checkedIn = checked.length;
+  if (checkedHtml) checkedHtml.innerHTML = checkedIn;
+  if (signedHtml) signedHtml.innerHTML = tourney.signUps.length;
+}
 
 function isPrivileged() {
   return (
@@ -83,7 +94,6 @@ async function showPeople(filterResults = false) {
       <div class="player-tbody"></div>`;
     }
     peopleTable = document.querySelector('.player-tbody');
-    if (tourney.signUps.length === 0) peopleTable.innerHTML += playerTablePH;
     displayTeams = tourney.signUps;
   } else {
     const usernameFilter = document
@@ -149,7 +159,7 @@ async function randomizeTeams(button) {
   const peoplePerTeam = parseInt(input.value);
   if (isNaN(peoplePerTeam)) return;
 
-  if (peoplePerTeam > tourney.signUps.length) {
+  if (peoplePerTeam > checkedIn) {
     Alert.fire({
       title: 'Not enough sign ups',
       icon: 'error',
@@ -158,7 +168,7 @@ async function randomizeTeams(button) {
     return;
   }
 
-  if (tourney.signUps.length % peoplePerTeam !== 0) {
+  if (checkedIn % peoplePerTeam !== 0) {
     const alertResponse = await Alert.fire({
       title: 'A team will not be full, continue?',
       icon: 'question',
@@ -473,6 +483,7 @@ function getRandomTeamHtml(team) {
   //prettier-ignore
   return `
     <div id="${team.id}">
+      <button onclick="copyTeam(${team.id})" class="btn primary-btn">Copy</button>
       <div class="player-trow collapsible" onclick="displayCollapsible(this)">
         <div class="main-content-player">
 
@@ -490,14 +501,25 @@ function getRandomTeamHtml(team) {
               player.twitchUsername
             }'s team</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm secondary-icon"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></svg>
           </div>
-
         </div>
       </div>
 
       <div class="team-collapsible collapsible-content" style="max-height: 100rem">
         ${getTeamMembersHtml(team.members, team.invited)}
-    </div
+      </div>
     `;
+}
+
+function copyTeam(teamId) {
+  const [team] = tourney.teams.filter((t) => t.id == teamId);
+  //team.members.splice(0, 1);
+  let copyText = `(${team.captain.twitchUsername}) -`;
+  for (member of team.members) {
+    copyText += ` ${member.twitchUsername} /`;
+  }
+
+  copyText = copyText.replace(/\/$/, '');
+  navigator.clipboard.writeText(copyText);
 }
 
 async function signUp() {

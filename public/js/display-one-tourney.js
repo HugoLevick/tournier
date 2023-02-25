@@ -23,6 +23,7 @@ async function getOneTourney(term) {
 
   tourney = await response.json();
   connectToTourneyWs();
+  updateSignUpsNumbers();
 
   const host = tourney.creator.twitchUsername;
   console.log(tourney);
@@ -31,7 +32,7 @@ async function getOneTourney(term) {
   linkToTwitchHost.href = 'https://twitch.tv/' + host;
   linkToTwitchHost.target = '_blank';
   linkToTwitchHost.innerHTML = host;
-  hostGameLbl.innerHTML = `Hosted by: ${linkToTwitchHost.outerHTML} | Rogue Company`;
+  hostGameLbl.innerHTML = `Hosted by: ${linkToTwitchHost.outerHTML} | Rogue Company | Checked In: <span id="checked-in-number">${checkedIn}</span> | Signed Up: <span id="signed-up-number">${tourney.signUps.length}</span>`;
 
   prizeLbl.innerHTML = '$' + tourney.prize.toLocaleString('en-US');
   tiersLbl.innerHTML = tourney.tiered ? 'YES' : 'NO';
@@ -61,11 +62,13 @@ function connectToTourneyWs() {
     const index = tourney.signUps.findIndex((t) => t.id === updatedTeam.id);
     tourney.signUps[index] = updatedTeam;
     updateSignUpHtml(updatedTeam);
+    updateSignUpsNumbers();
   });
 
   socket.on('sign-up-t-' + tourney.id, (team) => {
     tourney.signUps.push(team);
     addNewSignup(team);
+    updateSignUpsNumbers();
   });
 
   socket.on('sign-out-t-' + tourney.id, (team) => {
@@ -75,6 +78,8 @@ function connectToTourneyWs() {
 
     if (typeof index === 'number' && !isNaN(index))
       tourney.signUps.splice(index, 1);
+
+    updateSignUpsNumbers();
   });
 
   socket.on('random-t-' + tourney.id, (randomTeams) => {
