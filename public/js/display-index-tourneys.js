@@ -53,7 +53,7 @@ async function displayIndexTourneys() {
 
     const tournamentHost = document.createElement('div');
     tournamentHost.classList.add('tournament__hosted-by');
-    tournamentHost.innerHTML = 'Host: ' + tourney.creator.twitchUsername;
+    tournamentHost.innerHTML = 'Host: ' + tourney.creator.username;
     tournamentElement.appendChild(tournamentHost);
 
     const tournamentSignUp = document.createElement('div');

@@ -50,12 +50,12 @@ export class TourneysWsGateway
   async emitInviteDeny(team: TourneySignUps) {
     for (const member of team.members) {
       this.alertsWsGateway.sendAlert(
-        member.twitchUsername,
+        member.username,
         'A member denied an invite',
         team,
       );
       await this.notificationsService.create(member, {
-        message: `Someone in ${team.captain.twitchUsername}'s team denied an invite to a tourney`,
+        message: `Someone in ${team.captain.username}'s team denied an invite to a tourney`,
         json: JSON.stringify({
           type: 'deny-invite',
           tourney: { title: team.tourney.name, slug: team.tourney.slug },

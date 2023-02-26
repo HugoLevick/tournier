@@ -42,15 +42,15 @@ export class AlertsWsGateway
       this.logger.error(error);
     }
 
-    if (!payload.twitchUsername) {
+    if (!payload.username) {
       return;
     }
 
-    this.alertsWsService.removeClient(client, payload.twitchUsername);
+    this.alertsWsService.removeClient(client, payload.username);
   }
 
-  sendAlert(twitchUsername: string, message: string, data: any) {
-    const client = this.alertsWsService.getConnectedClient(twitchUsername);
+  sendAlert(username: string, message: string, data: any) {
+    const client = this.alertsWsService.getConnectedClient(username);
     if (client) {
       for (const socket in client.sockets) {
         const currentSocket: Socket = client.sockets[socket];

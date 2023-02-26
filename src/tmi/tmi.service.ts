@@ -26,7 +26,7 @@ export class TmiService {
       .execute();
 
     for (const creator of creatorUsers) {
-      bottedChannels.push(creator.creator_twitchUsername);
+      bottedChannels.push(creator.creator_username);
     }
     const options = {
       options: {

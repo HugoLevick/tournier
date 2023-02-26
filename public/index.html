@@ -66,4 +66,12 @@
   <script src="/js/tourney-functions.js"></script>
   <script defer src="js/get-user-and-connect-ws.js"></script>
   <script defer src="js/display-index-tourneys.js"></script>
+  <script>
+    let params = new URL(document.location).searchParams;
+    const error = params.get('error');
+
+    if (error) {
+      alert(error);
+    }
+  </script>
 </html>

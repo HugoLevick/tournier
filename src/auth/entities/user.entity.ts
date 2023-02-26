@@ -10,7 +10,6 @@ import {
 import { TourneySignUps } from 'src/tourneys/entities/tourney-sign-ups.entity';
 import { Tourney } from '../../tourneys/entities/tourney.entity';
 import { TourneyInvites } from 'src/tourneys/entities/tourney-invites.entity';
-import { ManyToOne } from 'typeorm';
 
 export enum UserRoles {
   user = 'USER',
@@ -32,13 +31,25 @@ export class User {
   email: string;
 
   @Column('text', {
+    nullable: true,
+    select: false,
+  })
+  password: string;
+
+  @Column('text', {
     nullable: false,
+    unique: true,
+  })
+  username: string;
+
+  @Column('text', {
+    nullable: true,
     unique: true,
   })
   twitchUsername: string;
 
   @Column('text', {
-    nullable: false,
+    nullable: true,
     unique: true,
     select: false,
   })
@@ -49,7 +60,7 @@ export class User {
     default:
       'https://static-cdn.jtvnw.net/user-default-pictures-uv/de130ab0-def7-11e9-b668-784f43822e80-profile_image-300x300.png',
   })
-  twitchProfileImageUrl: string;
+  profileImageUrl: string;
 
   @Column('enum', {
     enum: UserRoles,

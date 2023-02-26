@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../css/login.css" />
+    <link rel="stylesheet" href="../css/spinner.css" />
+    <title>Tournier - Login</title>
+  </head>
+  <body class="align">
+    <div class="grid">
+      <a href="/" style="display: flex; width: 100%; justify-content: center">
+        <img src="../img/logo.webp" class="logo" />
+      </a>
+      <form class="form login" id="login-form">
+        <div class="form__field">
+          <label for="login__email">
+            <svg class="icon">
+              <use xlink:href="#icon-email"></use>
+            </svg>
+            <span class="hidden">Email</span></label
+          >
+          <input
+            id="login__email"
+            type="email"
+            name="email"
+            class="form__input"
+            placeholder="E-mail"
+            required
+          />
+        </div>
+        <div class="error-label hidden">Please check your e-mail address</div>
+
+        <div class="form__field">
+          <label for="login__username">
+            <svg class="icon">
+              <use xlink:href="#icon-user"></use>
+            </svg>
+
+            <span class="hidden"> <div class="spinner"></div> </span>
+          </label>
+
+          <input
+            autocomplete="username"
+            id="login__username"
+            type="text"
+            name="username"
+            class="form__input"
+            placeholder="Username"
+            onchange="verifyUsername()"
+            required
+          />
+        </div>
+        <div class="error-label hidden">
+          Usernames must: be at least 4 characters long, have at least one
+          letter and not include special characters ( _ is allowed).
+        </div>
+        <div class="error-label hidden" id="user-taken-error">
+          That username is already registered
+        </div>
+
+        <div class="form__field">
+          <label for="login__password">
+            <svg class="icon">
+              <use xlink:href="#icon-lock"></use>
+            </svg>
+            <span class="hidden">Password</span></label
+          >
+          <input
+            id="login__password"
+            type="password"
+            name="password"
+            class="form__input"
+            placeholder="Password"
+            oninput="verifyPassword()"
+            required
+          />
+        </div>
+        <div class="error-label hidden">
+          Passwords must be at least 4 characters long and may include special
+          characters
+        </div>
+
+        <div class="form__field">
+          <label for="login__repeat-password">
+            <svg class="icon">
+              <use xlink:href="#icon-lock"></use>
+            </svg>
+            <span class="hidden">Repeat password</span></label
+          >
+          <input
+            id="login__repeat-password"
+            type="password"
+            name="repeat-password"
+            class="form__input"
+            placeholder="Repeat Password"
+            oninput="verifyPassword()"
+            required
+          />
+        </div>
+        <div class="error-label hidden">Passwords don't match</div>
+
+        <div class="form__field">
+          <input type="submit" value="Sign Up" />
+        </div>
+      </form>
+
+      <p class="text--center">
+        Already have an account? <a href="/auth/login.html">Sign in now</a>
+        <svg class="icon">
+          <use xlink:href="#icon-arrow-right"></use>
+        </svg>
+      </p>
+    </div>
+
+    <svg xmlns="http://www.w3.org/2000/svg" class="icons">
+      <symbol id="icon-arrow-right" viewBox="0 0 1792 1792">
+        <path
+          d="M1600 960q0 54-37 91l-651 651q-39 37-91 37-51 0-90-37l-75-75q-38-38-38-91t38-91l293-293H245q-52 0-84.5-37.5T128 1024V896q0-53 32.5-90.5T245 768h704L656 474q-38-36-38-90t38-90l75-75q38-38 90-38 53 0 91 38l651 651q37 35 37 90z"
+        />
+      </symbol>
+      <symbol id="icon-lock" viewBox="0 0 1792 1792">
+        <path
+          d="M640 768h512V576q0-106-75-181t-181-75-181 75-75 181v192zm832 96v576q0 40-28 68t-68 28H416q-40 0-68-28t-28-68V864q0-40 28-68t68-28h32V576q0-184 132-316t316-132 316 132 132 316v192h32q40 0 68 28t28 68z"
+        />
+      </symbol>
+      <symbol id="icon-user" viewBox="0 0 1792 1792">
+        <path
+          d="M1600 1405q0 120-73 189.5t-194 69.5H459q-121 0-194-69.5T192 1405q0-53 3.5-103.5t14-109T236 1084t43-97.5 62-81 85.5-53.5T538 832q9 0 42 21.5t74.5 48 108 48T896 971t133.5-21.5 108-48 74.5-48 42-21.5q61 0 111.5 20t85.5 53.5 62 81 43 97.5 26.5 108.5 14 109 3.5 103.5zm-320-893q0 159-112.5 271.5T896 896 624.5 783.5 512 512t112.5-271.5T896 128t271.5 112.5T1280 512z"
+        />
+      </symbol>
+      <symbol id="icon-email" viewBox="0 0 512 512">
+        <!-- Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. -->
+        <path
+          d="M256 64C150 64 64 150 64 256s86 192 192 192c17.7 0 32 14.3 32 32s-14.3 32-32 32C114.6 512 0 397.4 0 256S114.6 0 256 0S512 114.6 512 256v32c0 53-43 96-96 96c-29.3 0-55.6-13.2-73.2-33.9C320 371.1 289.5 384 256 384c-70.7 0-128-57.3-128-128s57.3-128 128-128c27.9 0 53.7 8.9 74.7 24.1c5.7-5 13.1-8.1 21.3-8.1c17.7 0 32 14.3 32 32v80 32c0 17.7 14.3 32 32 32s32-14.3 32-32V256c0-106-86-192-192-192zm64 192a64 64 0 1 0 -128 0 64 64 0 1 0 128 0z"
+        />
+      </symbol>
+    </svg>
+  </body>
+  <script>
+    let verifiedPassword = false;
+    let verifiedUsername = false;
+    const email = document.getElementById('login__email');
+    const username = document.getElementById('login__username');
+    const password = document.getElementById('login__password');
+    const repeatPassword = document.getElementById('login__repeat-password');
+    const spinner = document.querySelector('.spinner');
+    const userTakenError = document.getElementById('user-taken-error');
+
+    function verifyPassword() {
+      if (password.value !== repeatPassword.value && password.value) {
+        repeatPassword.parentElement.nextElementSibling.classList.remove(
+          'hidden',
+        );
+        repeatPassword.parentElement.classList.add('error_field');
+        verifiedPassword = false;
+      } else {
+        repeatPassword.parentElement.nextElementSibling.classList.add('hidden');
+        repeatPassword.parentElement.classList.remove('error_field');
+        verifiedPassword = true;
+      }
+
+      if (password.value.length < 4) {
+        password.parentElement.nextElementSibling.classList.remove('hidden');
+        password.parentElement.classList.add('error_field');
+        verifiedPassword = false;
+      } else {
+        password.parentElement.nextElementSibling.classList.add('hidden');
+        password.parentElement.classList.remove('error_field');
+      }
+    }
+
+    async function verifyUsername() {
+      if (
+        username.value.length < 4 ||
+        !username.value.match(/^[\w\_]+$/) ||
+        username.value.match(/^[0-9]+$/)
+      ) {
+        username.parentElement.nextElementSibling.classList.remove('hidden');
+        username.parentElement.classList.add('error_field');
+        verifiedUsername = false;
+      } else {
+        username.parentElement.nextElementSibling.classList.add('hidden');
+        username.parentElement.classList.remove('error_field');
+        verifiedUsername = true;
+      }
+
+      if (verifiedUsername) {
+        spinner.parentElement.classList.remove('hidden');
+        const response = await fetch('/api/auth/verify/' + username.value);
+
+        const isAvailable = await response.json();
+
+        if (!isAvailable) {
+          verifiedUsername = false;
+          userTakenError.classList.remove('hidden');
+          username.parentElement.classList.add('error_field');
+          verifiedUsername = false;
+        } else {
+          userTakenError.classList.add('hidden');
+          verifiedUsername = true;
+        }
+        spinner.parentElement.classList.add('hidden');
+      }
+    }
+
+    document
+      .getElementById('login-form')
+      .addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (!verifiedPassword || !verifiedUsername) {
+          return false;
+        }
+
+        const body = {
+          email: email.value.trim(),
+          username: username.value.trim(),
+          password: password.value,
+        };
+
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify(body),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          window.location = '/auth/login.html?message=Account created';
+        }
+
+        return false;
+      });
+  </script>
+</html>

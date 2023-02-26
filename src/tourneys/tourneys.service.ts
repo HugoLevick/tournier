@@ -107,7 +107,7 @@ export class TourneysService {
 
     if (!(tourney.creator.id === user.id) && !this.isPrivileged(user)) {
       throw new ForbiddenException(
-        `Tourney '${id}' does not belong to ${user.twitchUsername}`,
+        `Tourney '${id}' does not belong to ${user.username}`,
       );
     }
 
@@ -141,7 +141,7 @@ export class TourneysService {
 
     if (tourney.creator.id !== user.id && !this.isPrivileged(user))
       throw new ForbiddenException(
-        `Tourney '${term}' does not belong to ${user.twitchUsername}`,
+        `Tourney '${term}' does not belong to ${user.username}`,
       );
 
     tourney.isActive = false;
@@ -184,7 +184,7 @@ export class TourneysService {
     const checkInTourneyTeamQB =
       this.tourneySignUpsRepository.createQueryBuilder();
 
-    let queryMembers = [user.twitchUsername, ...tourneySignUpDto.members];
+    let queryMembers = [user.username, ...tourneySignUpDto.members];
     const inTeam = await checkInTourneyTeamQB
       //Select teams where the querymembers are already in
       .select(['TourneySignUps'])
@@ -194,7 +194,7 @@ export class TourneysService {
       .leftJoinAndSelect('invited.toUser', 'inviteToUser')
       //Where Tourney is the one provided AND Captain is the user trying to create the team
       .where(
-        'TourneySignUps.tourneyId=:tourneyId AND ((TourneySignUps.verifiedInvites=false AND Captain.twitchUsername IN(:...members)) OR (TourneySignUps.verifiedInvites=true AND Members.twitchUsername IN(:...members)) OR (TourneySignUps.verifiedInvites=false AND inviteToUser.twitchUsername IN(:...members) AND invited.accepted=true ))',
+        'TourneySignUps.tourneyId=:tourneyId AND ((TourneySignUps.verifiedInvites=false AND Captain.username IN(:...members)) OR (TourneySignUps.verifiedInvites=true AND Members.username IN(:...members)) OR (TourneySignUps.verifiedInvites=false AND inviteToUser.username IN(:...members) AND invited.accepted=true ))',
         {
           tourneyId: tourney.id,
           captainId: user.id,
@@ -206,14 +206,14 @@ export class TourneysService {
     if (inTeam)
       if (
         inTeam['Captain_id'] === user.id ||
-        queryMembers.includes(inTeam['Captain_twitchUsername'])
+        queryMembers.includes(inTeam['Captain_username'])
       )
         throw new BadRequestException(
-          `Player ${inTeam['Captain_twitchUsername']} is already in a team (captain)`,
+          `Player ${inTeam['Captain_username']} is already in a team (captain)`,
         );
       else
         throw new BadRequestException(
-          `Player ${inTeam.Members_twitchUsername} is already in a team`,
+          `Player ${inTeam.Members_username} is already in a team`,
         );
 
     const invitedPeopleQB = this.tourneyInvitesRepository.createQueryBuilder();
@@ -225,7 +225,7 @@ export class TourneysService {
         .leftJoinAndSelect('fromTeam.captain', 'teamCaptain')
         .leftJoinAndSelect('fromTeam.tourney', 'tourney')
         .where(
-          'tourney.id=:tourneyId AND teamCaptain.id=:userId AND toUser.twitchUsername IN(:...members)',
+          'tourney.id=:tourneyId AND teamCaptain.id=:userId AND toUser.username IN(:...members)',
           {
             userId: user.id,
             tourneyId: tourney.id,
@@ -236,7 +236,7 @@ export class TourneysService {
 
       if (invitedPeople) {
         throw new BadRequestException(
-          `Player '${invitedPeople.toUser.twitchUsername}' already has a pending invite from you`,
+          `Player '${invitedPeople.toUser.username}' already has a pending invite from you`,
         );
       }
     }
@@ -299,7 +299,7 @@ export class TourneysService {
     try {
       for (const invite of team.invited) {
         this.alertsWsGateway.sendAlert(
-          invite.toUser.twitchUsername,
+          invite.toUser.username,
           'You have an invite',
           invite,
         );
@@ -323,7 +323,7 @@ export class TourneysService {
     const tourney = await this.findOne(term);
     if (!this.isTourneyOwnerOrPrivileged(tourney, owner))
       throw new UnauthorizedException(
-        'Tourney does not belong to ' + owner.twitchUsername,
+        'Tourney does not belong to ' + owner.username,
       );
 
     if (tourneySignUpDto.members.length !== tourney.peoplePerTeam)
@@ -353,18 +353,18 @@ export class TourneysService {
       .leftJoinAndSelect('TourneySignUps.invited', 'invited')
       .leftJoinAndSelect('invited.toUser', 'inviteToUser')
       .where(
-        'TourneySignUps.tourneyId=:tourneyId AND ( Captain.id=:captainId OR (TourneySignUps.verifiedInvites=true AND Members.twitchUsername=:username) OR (inviteToUser.twitchUsername=:username AND invited.accepted=true ))',
+        'TourneySignUps.tourneyId=:tourneyId AND ( Captain.id=:captainId OR (TourneySignUps.verifiedInvites=true AND Members.username=:username) OR (inviteToUser.username=:username AND invited.accepted=true ))',
         {
           tourneyId: tourney.id,
           captainId: user.id,
-          username: user.twitchUsername,
+          username: user.username,
         },
       )
       .getOne();
 
     if (!team)
       throw new NotFoundException(
-        `Player '${user.twitchUsername}' was not in a team`,
+        `Player '${user.username}' was not in a team`,
       );
 
     try {
@@ -394,15 +394,13 @@ export class TourneysService {
 
     if (!this.isTourneyOwnerOrPrivileged(tourney, user))
       throw new UnauthorizedException(
-        `User ${user.twitchUsername} is not owner or admin`,
+        `User ${user.username} is not owner or admin`,
       );
 
-    const person = await this.authService.findOne(
-      tourneyPersonDto.twitchUsername,
-    );
+    const person = await this.authService.findOne(tourneyPersonDto.username);
     if (!person)
       throw new NotFoundException(
-        `Player ${tourneyPersonDto.twitchUsername} is not registered`,
+        `Player ${tourneyPersonDto.username} is not registered`,
       );
 
     return this.signOut(undefined, person, tourney);
@@ -459,7 +457,7 @@ export class TourneysService {
           invite.fromTeam,
         );
         invite.fromTeam.members = invite.fromTeam.members.filter(
-          (m) => m.twitchUsername !== user.twitchUsername,
+          (m) => m.username !== user.username,
         );
         await this.tourneysWsGateway.emitInviteDeny(invite.fromTeam);
         await this.tourneySignUpsRepository.delete({ id: invite.fromTeam.id });
@@ -647,7 +645,7 @@ export class TourneysService {
       for (const team of pendingTeams) {
         this.tourneysWsGateway.emitSignOut(tourney.id, team);
         this.alertsWsGateway.sendAlert(
-          team.captain.twitchUsername,
+          team.captain.username,
           'Your team has been dissolved',
           { type: 'alert', tourney: tourney.slug },
         );

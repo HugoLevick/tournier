@@ -25,7 +25,7 @@ async function getOneTourney(term) {
   connectToTourneyWs();
   updateSignUpsNumbers();
 
-  const host = tourney.creator.twitchUsername;
+  const host = tourney.creator.username;
   console.log(tourney);
   titleLbl.innerHTML = tourney.name;
   const linkToTwitchHost = document.createElement('a');

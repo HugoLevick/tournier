@@ -108,7 +108,7 @@ async function showPeople(filterResults = false) {
       if (team.tier == (tierFilter || team.tier)) passedTFilter = true;
 
       for (member of team.members) {
-        if (member.twitchUsername.match(filterRegExp)) passedUFilter = true;
+        if (member.username.match(filterRegExp)) passedUFilter = true;
       }
 
       return passedTFilter && passedUFilter;
@@ -138,7 +138,7 @@ function showTeams(filter) {
       <div class="player-trow h5">
         <div class="container-center">Teams</div>
         ${
-          tourney.creator.twitchUsername === user?.twitchUsername ||
+          tourney.creator.username === user?.username ||
           ['OWNER', 'ADMIN'].includes(user?.role)
             ? `<div class="container-center ppt-group">Fuse teams: <input type="text" inputmode="numeric" value=${peoplePerTeamInput} id="ppt-inp" onkeydown="if(event.keyCode == 13) document.querySelector('.rnd-teams-btn').click()" ></div><button class="btn rnd-teams-btn" onclick="randomizeTeams(this)">Randomize</button>`
             : ''
@@ -215,7 +215,7 @@ function showInfo() {
     mainGrid.innerHTML = `
     <button class="btn primary-btn" onclick="toggleCheckIns()">Toggle Check-Ins</button>
     `;
-  else mainGrid.innerHTML = 'uwu';
+  else mainGrid.innerHTML = 'Work in progress...';
 }
 
 async function toggleCheckIns() {
@@ -256,8 +256,8 @@ function addSignUpMember(username, pfp) {
     return;
   }
   const player = {
-    twitchUsername: username,
-    twitchProfileImageUrl: pfp,
+    username: username,
+    profileImageUrl: pfp,
   };
   if (!signUpTeam.find((p) => p === username)) {
     const input = document.querySelector('.popup-search-player');
@@ -291,7 +291,7 @@ function getTeamHtml(team) {
           <div class="main-content-player">
             <div
               class="player-table-pfp"
-              style="background-image: url('${player.twitchProfileImageUrl.replaceAll(
+              style="background-image: url('${player.profileImageUrl.replaceAll(
                 '300',
                 '50',
               )}');"
@@ -303,7 +303,7 @@ function getTeamHtml(team) {
                 ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm green-icon" style="margin-right: 0.5rem"><!--! Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M470.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L192 338.7 425.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>`
                 : ''
             }
-            ${player.twitchUsername}
+            ${player.username}
             </div>
           </div>
         </div>
@@ -331,7 +331,7 @@ function getTeamHtml(team) {
 
           <div
             class="player-table-pfp"
-            style="background-image: url('${player.twitchProfileImageUrl.replaceAll(
+            style="background-image: url('${player.profileImageUrl.replaceAll(
               '300',
               '50',
             )}');"
@@ -347,7 +347,7 @@ function getTeamHtml(team) {
                 ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm white-icon" style="margin-right: 0.5rem">${clockIcon}</svg>`
                 : ''
             }
-            ${player.twitchUsername}'s team
+            ${player.username}'s team
             </span>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm secondary-icon"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></svg>
           </div>
@@ -394,7 +394,7 @@ function getActionsHtml(team) {
     </button>
     
     <!-- Kick button -->
-    <button class="btn" onclick="kick('${team.captain.twitchUsername}')">
+    <button class="btn" onclick="kick('${team.captain.username}')">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" class="fa-icon-sm white-icon" style="height: auto"><!--! Font Awesome Pro 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3zM472 200H616c13.3 0 24 10.7 24 24s-10.7 24-24 24H472c-13.3 0-24-10.7-24-24s10.7-24 24-24z"/></svg>
     </button>
     `;
@@ -442,28 +442,24 @@ function updateSignUpHtml(newSignUp) {
 function getTeamMembersHtml(members = [], invites = [], size) {
   html = '';
   for (const m of members) {
-    const mInv = invites.find(
-      (i) => i.toUser.twitchUsername === m.twitchUsername,
-    );
+    const mInv = invites.find((i) => i.toUser.username === m.username);
     let invHtml = '';
     if (mInv) {
       invHtml = mInv.accepted
-        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class='fa-icon-sm green-icon' id='${m.twitchUsername}-status'><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. -->${checkIcon}</svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class='fa-icon-sm secondary-icon' id='${m.twitchUsername}-status'><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. -->${clockIcon}</svg>`;
+        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class='fa-icon-sm green-icon' id='${m.username}-status'><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. -->${checkIcon}</svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class='fa-icon-sm secondary-icon' id='${m.username}-status'><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. -->${clockIcon}</svg>`;
     }
     html += `
       <div class="table-team">
         <div class="main-content-player">
           <div
             class="player-table-pfp"
-            style="background-image: url('${m.twitchProfileImageUrl.replaceAll(
+            style="background-image: url('${m.profileImageUrl.replaceAll(
               '300',
               '50',
             )}');"
           ></div>
-          <div style="display:flex; gap: 1rem;">${
-            m.twitchUsername
-          } ${invHtml}</div>
+          <div style="display:flex; gap: 1rem;">${m.username} ${invHtml}</div>
         </div>
 
         ${
@@ -489,7 +485,7 @@ function getRandomTeamHtml(team) {
 
           <div
             class="player-table-pfp"
-            style="background-image: url('${player.twitchProfileImageUrl.replaceAll(
+            style="background-image: url('${player.profileImageUrl.replaceAll(
               '300',
               '50',
             )}');"
@@ -498,7 +494,7 @@ function getRandomTeamHtml(team) {
 
           <div class="container-center" style="gap: 1rem;">
             <span>${
-              player.twitchUsername
+              player.username
             }'s team</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="fa-icon-sm secondary-icon"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></svg>
           </div>
         </div>
@@ -513,9 +509,9 @@ function getRandomTeamHtml(team) {
 function copyTeam(teamId) {
   const [team] = tourney.teams.filter((t) => t.id == teamId);
   //team.members.splice(0, 1);
-  let copyText = `(${team.captain.twitchUsername}) -`;
+  let copyText = `(${team.captain.username}) -`;
   for (member of team.members) {
-    copyText += ` ${member.twitchUsername} /`;
+    copyText += ` ${member.username} /`;
   }
 
   copyText = copyText.replace(/\/$/, '');
@@ -627,9 +623,9 @@ async function checkIn(teamId) {
   }
 }
 
-async function kick(twitchUsername) {
+async function kick(username) {
   const body = {
-    twitchUsername,
+    username,
   };
   response = await fetch(`/api/tourneys/${tourney.id}/signout-admin`, {
     method: 'DELETE',
@@ -641,7 +637,7 @@ async function kick(twitchUsername) {
   });
 
   if (response.ok) {
-    Alert.fire('Success!', `${twitchUsername} was kicked!`, 'success');
+    Alert.fire('Success!', `${username} was kicked!`, 'success');
   } else {
     response = await response.json();
     Alert.fire('Whoops!', response.message, 'error');
@@ -666,8 +662,8 @@ async function doneTyping() {
   }
   for (const player of users) {
     if (
-      player.twitchUsername !== user.twitchUsername &&
-      !signUpTeam.includes(player.twitchUsername)
+      player.username !== user.username &&
+      !signUpTeam.includes(player.username)
     )
       list.innerHTML += getSignUpMemberHtml(player);
   }
@@ -677,7 +673,7 @@ async function addNewSignup(team) {
   const placeholder = document.getElementById('player-table-placeholder');
   console.log(team);
   const acceptedInvite = team.invited.filter((inv) => {
-    return inv.accepted && inv.toUser.twitchUsername === user.twitchUsername;
+    return inv.accepted && inv.toUser.username === user.username;
   });
 
   if (
@@ -703,7 +699,7 @@ function removeSignUp(team) {
 
 //! TODO:Change status ya no sirve, combinar con updateSIgnUp
 function changeStatus(username) {
-  if (username === user?.twitchUsername) setSignOutButton();
+  if (username === user?.username) setSignOutButton();
   const icon = document.getElementById(username + '-status');
   icon.outerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class='fa-icon-sm green-icon' id='${username}-status'><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. -->${checkIcon}</svg>`;
 }
@@ -711,16 +707,16 @@ function changeStatus(username) {
 function getSignUpMemberHtml(player, removeButton = false, captain = false) {
   //prettier-ignore
   return `
-    <div class="sign-up-player" id="su-${player.twitchUsername}" ${!removeButton ? `onclick="addSignUpMember('${player.twitchUsername}', '${player.twitchProfileImageUrl}')" style="cursor:pointer;"`: ''}>
-      <div class="su-player-pfp" style="background-image: url('${player.twitchProfileImageUrl}')"></div>
+    <div class="sign-up-player" id="su-${player.username}" ${!removeButton ? `onclick="addSignUpMember('${player.username}', '${player.profileImageUrl}')" style="cursor:pointer;"`: ''}>
+      <div class="su-player-pfp" style="background-image: url('${player.profileImageUrl}')"></div>
       <div class="su-player-username">
-        ${player.twitchUsername}
+        ${player.username}
       </div>
 
     ${removeButton
       ? `
       <div class="su-player-action">
-        <button onclick="removeSignUpMember('${player.twitchUsername}')" ${captain? 'disabled' : ''}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" class="fa-icon-sm"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M376.6 84.5c11.3-13.6 9.5-33.8-4.1-45.1s-33.8-9.5-45.1 4.1L192 206 56.6 43.5C45.3 29.9 25.1 28.1 11.5 39.4S-3.9 70.9 7.4 84.5L150.3 256 7.4 427.5c-11.3 13.6-9.5 33.8 4.1 45.1s33.8 9.5 45.1-4.1L192 306 327.4 468.5c11.3 13.6 31.5 15.4 45.1 4.1s15.4-31.5 4.1-45.1L233.7 256 376.6 84.5z"/></svg></button>
+        <button onclick="removeSignUpMember('${player.username}')" ${captain? 'disabled' : ''}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" class="fa-icon-sm"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M376.6 84.5c11.3-13.6 9.5-33.8-4.1-45.1s-33.8-9.5-45.1 4.1L192 206 56.6 43.5C45.3 29.9 25.1 28.1 11.5 39.4S-3.9 70.9 7.4 84.5L150.3 256 7.4 427.5c-11.3 13.6-9.5 33.8 4.1 45.1s33.8 9.5 45.1-4.1L192 306 327.4 468.5c11.3 13.6 31.5 15.4 45.1 4.1s15.4-31.5 4.1-45.1L233.7 256 376.6 84.5z"/></svg></button>
       </div>`
       :`
       <div class="su-player-action">
@@ -754,10 +750,7 @@ function showCheckInButton() {
 
   let isTeamCaptainCheckedOut = false;
   for (team of tourney.signUps) {
-    if (
-      !team.isCheckedIn &&
-      team.captain.twitchUsername === user?.twitchUsername
-    )
+    if (!team.isCheckedIn && team.captain.username === user?.username)
       isTeamCaptainCheckedOut = true;
   }
   if (isTeamCaptainCheckedOut) signCheckDiv.prepend(checkInBtn);
@@ -770,7 +763,7 @@ function hideCheckInButton() {
 
 function getTourneySignUp() {
   const team = tourney.signUps.find(
-    (t) => t.captain.twitchUsername === user?.twitchUsername,
+    (t) => t.captain.username === user?.username,
   );
   return team;
 }

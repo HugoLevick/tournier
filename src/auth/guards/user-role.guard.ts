@@ -34,7 +34,7 @@ export class UserRoleGuard implements CanActivate {
     if (validRoles.includes(user.role)) return true;
 
     throw new ForbiddenException(
-      `User ${user.twitchUsername} needs a valid role: [${validRoles}]`,
+      `User ${user.username} needs a valid role: [${validRoles}]`,
     );
   }
 }

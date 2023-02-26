@@ -9,28 +9,59 @@
   }
 
   async function getToken() {
-    try {
-      token = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code }),
-      }).then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) {
-          redirecting = true;
-          console.log(1);
-          window.location = `/?error=Authentication failed (${data.message})`;
-        } else return data.token;
-      });
+    token = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code }),
+    }).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) {
+        if (data.message.match('New signups must include a username')) {
+          let valid = false;
+          let message = 'Create a username';
+          let username = '';
+          while (!valid) {
+            username = await prompt(message);
+            await alert(username);
+            const available = await fetch('/api/auth/verify/' + username).then(
+              (r) => r.json(),
+            );
 
-      if (!redirecting) {
-        if (token) await localStorage.setItem('JWT', token);
-        window.location = '/';
-      }
-    } catch (error) {
-      window.location = '/?error=Authentication failed (App error)';
+            await alert(available);
+            if (available) {
+              valid = true;
+              break;
+            }
+          }
+
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ code, username }),
+          });
+
+          if (response.ok) {
+            let tokenData = await response.json();
+            return tokenData.token;
+          } else {
+            let tokenData = await response.json();
+            redirecting = true;
+            window.location = `/?error=Authentication failed (${tokenData.message})`;
+          }
+        } else {
+          redirecting = true;
+          window.location = `/?error=Authentication failed (${data.message})`;
+        }
+      } else return data.token;
+    });
+
+    if (!redirecting) {
+      if (token) await localStorage.setItem('JWT', token);
+      window.location = '/';
     }
   }
 

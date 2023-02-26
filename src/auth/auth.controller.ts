@@ -6,8 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  Query,
-  Redirect,
 } from '@nestjs/common';
 import { ParseUUIDPipe } from '@nestjs/common/pipes';
 import { AuthService } from './auth.service';
@@ -26,6 +24,16 @@ export class AuthController {
   @Get('validate')
   async validate(@GetUser() user: User) {
     return user;
+  }
+
+  @Get('verify/:username')
+  async verifyAvailability(@Param('username') username: string) {
+    return this.authService.verifyUsername(username);
+  }
+
+  @Post('register')
+  async register(@Body() registerUserDto: RegisterUserDto) {
+    return this.authService.register(registerUserDto);
   }
 
   @Get('search/:term')

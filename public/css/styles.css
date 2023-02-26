@@ -583,6 +583,13 @@ main {
     background-color: var(--background);
 }
 
+@media (max-width: 768px) {
+    .alert-popup {
+        width: 80%;
+        max-width: unset;
+    }
+}
+
 body.swal2-shown>[aria-hidden="true"] {
     transition: 0.1s filter;
     filter: blur(8px);
@@ -600,6 +607,16 @@ body.swal2-shown>[aria-hidden="true"] {
     color: white;
     font-size: 2rem;
     background-color: var(--background);
+}
+
+@media (max-width: 768px) {
+    .sign-up-popup {
+        width: 90%;
+        max-width: unset;
+    }
+    .swal2-html-container {
+        margin: unset;
+    }
 }
 
 .sign-up-confirm {
@@ -625,6 +642,16 @@ body.swal2-shown>[aria-hidden="true"] {
     align-items: center;
     gap: 1rem;
     padding: 1rem 2rem;
+}
+
+@media (max-width: 768px) {
+    .sign-up-player {
+        padding: 1rem 0;
+    }
+
+    .su-player-username {
+        overflow-x: auto;
+    }
 }
 
 .sign-up-player > *:nth-child(2){

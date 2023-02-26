@@ -18,6 +18,11 @@ import axios, { AxiosResponse } from 'axios';
 import { UnauthorizedException } from '@nestjs/common';
 import { CommonService } from '../common/common.service';
 import { TwitchBodyRequest } from '../auth/interfaces/twitch-body-request.interface';
+import * as bcrypt from 'bcrypt';
+
+interface PendingRegistration {
+  [id: string]: { email: string; twitchId: string; twitchUsername: string };
+}
 
 @Injectable()
 export class AuthService {
@@ -33,10 +38,10 @@ export class AuthService {
 
   async search(term: string) {
     return this.userRepository.find({
-      select: { id: false, twitchUsername: true, twitchProfileImageUrl: true },
-      where: { twitchUsername: Like(`%${term}%`) },
+      select: { id: false, username: true, profileImageUrl: true },
+      where: { username: Like(`%${term}%`) },
       order: {
-        twitchUsername: 'ASC',
+        username: 'ASC',
       },
     });
   }
@@ -45,22 +50,48 @@ export class AuthService {
     const findOneQuery = this.userRepository.createQueryBuilder();
 
     return await findOneQuery
-      .where('User.twitchId=:term OR User.twitchUsername=:term', {
+      .where('User.twitchId=:term OR User.username=:term', {
         term: term.toLowerCase(),
       })
       .getOne();
   }
 
-  async register(registerUserDto: RegisterUserDto) {
-    const twitchUsername = registerUserDto.twitchUsername.toLowerCase();
-    try {
-      const user = this.userRepository.create({
-        ...registerUserDto,
-        twitchUsername,
+  async register(
+    registerUserDto: RegisterUserDto,
+    provider: string = 'tournier',
+  ) {
+    if (registerUserDto.username.match(/^[0-9]+$/))
+      throw new BadRequestException('A username must have at least one letter');
+    const username = registerUserDto.username.toLowerCase();
+    let user: User;
+
+    if (provider === 'tournier') {
+      //Email registration
+
+      //No use for twitch id, delete for security
+      delete registerUserDto.twitchId;
+
+      if (!registerUserDto.email || !registerUserDto.password)
+        throw new BadRequestException('Email and password are required');
+      const { password, email } = registerUserDto;
+
+      user = this.userRepository.create({
+        username,
+        email,
+        password: bcrypt.hashSync(password, 10),
       });
+    } else if (provider === 'twitch') {
+      //Twitch registration
+      user = this.userRepository.create({
+        ...registerUserDto,
+        username,
+      });
+    }
 
+    //Save user
+    try {
       await this.userRepository.save(user);
-
+      delete user.password;
       return user;
     } catch (error) {
       this.handleDBErrors(error);
@@ -68,107 +99,163 @@ export class AuthService {
   }
 
   async login(loginUserDto: LoginUserDto) {
-    let email: string,
-      twitchUsername: string,
+    //Variables
+    let twitchEmail: string,
       twitchId: string,
-      twitchProfileImageUrl: string;
+      profileImageUrl: string,
+      twitchUsername: string,
+      user: User;
+
     const { code } = loginUserDto;
 
-    const body: TwitchBodyRequest = {
-      client_id: this.configService.get('TWITCH_CLIENT_ID'),
-      client_secret: this.configService.get('TWITCH_SECRET'),
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: `${this.configService.get('HOST')}${this.configService.get(
-        'REDIRECT_URI',
-      )}`,
-    };
+    if (code) {
+      //* Twitch Login
+      const body: TwitchBodyRequest = {
+        client_id: this.configService.get('TWITCH_CLIENT_ID'),
+        client_secret: this.configService.get('TWITCH_SECRET'),
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: `${this.configService.get(
+          'HOST',
+        )}${this.configService.get('REDIRECT_URI')}`,
+      };
 
-    //* Get own token
-    // body = {
-    //   client_id: this.configService.get('TWITCH_CLIENT_ID'),
-    //   client_secret: this.configService.get('TWITCH_SECRET'),
-    //   grant_type: 'client_credentials',
-    // };
+      //* Get own token
+      // body = {
+      //   client_id: this.configService.get('TWITCH_CLIENT_ID'),
+      //   client_secret: this.configService.get('TWITCH_SECRET'),
+      //   grant_type: 'client_credentials',
+      // };
 
-    //Encode body
-    const encodedBody = this.encodeBody(body);
+      //Encode body
+      const encodedBody = this.encodeBody(body);
 
-    const tokenData = await this.getTwitchTokenData(encodedBody);
+      const tokenData = await this.getTwitchTokenData(encodedBody);
 
-    if (!tokenData) throw new UnauthorizedException('Authentication denied');
+      if (!tokenData) throw new UnauthorizedException('Authentication denied');
 
-    const token: string = tokenData.access_token;
+      const token: string = tokenData.access_token;
 
-    const validateData = await this.getValidateData(token);
+      const validateData = await this.getValidateData(token);
 
-    twitchUsername = validateData.login;
-    twitchId = validateData.user_id;
+      twitchUsername = validateData.login;
+      twitchId = validateData.user_id;
 
-    const userFetchData = await this.getUserData(twitchId, token);
+      const userFetchData = await this.getUserData(twitchId, token);
 
-    let userData: any;
+      let userData: any;
 
-    if (!userFetchData.data[0]) {
-      throw new BadRequestException('User not found on twitch');
-    } else userData = userFetchData.data[0];
+      if (!userFetchData.data[0]) {
+        throw new BadRequestException('User not found on twitch');
+      } else userData = userFetchData.data[0];
 
-    email = userData.email;
+      twitchEmail = userData.email;
 
-    twitchProfileImageUrl = userData.profile_image_url;
+      profileImageUrl = userData.profile_image_url;
 
-    if (!twitchId) {
-      this.logger.error('Couldnt find twitch id');
-      throw new InternalServerErrorException('Something unexpected happened');
-    }
+      if (!twitchId) {
+        this.logger.error('Couldnt find twitch id');
+        throw new InternalServerErrorException('Something unexpected happened');
+      }
 
-    let user: User;
-    user = await this.userRepository.findOne({
-      where: { twitchId, isActive: true },
-      select: {
-        id: true,
-        email: true,
-        twitchProfileImageUrl: true,
-        twitchUsername: true,
-      },
-    });
+      // if (this.userRepository.findBy({ username: twitchUsername })) {
+      //   throw new BadRequestException();
+      // }
 
-    if (!user)
-      user = await this.register({
-        email,
-        twitchUsername,
-        twitchId,
-        twitchProfileImageUrl,
+      user = await this.userRepository.findOne({
+        where: { twitchId, isActive: true },
+        select: {
+          id: true,
+          email: true,
+          profileImageUrl: true,
+          username: true,
+        },
       });
 
-    if (user.twitchProfileImageUrl !== twitchProfileImageUrl) {
-      await this.update(user.id, { twitchProfileImageUrl });
-    }
+      let isNewRegistration = false;
+      if (!user) {
+        let username = twitchUsername;
+        let isValidUsername = await this.verifyUsername(username);
+        let numberToAdd: number;
+        while (!isValidUsername) {
+          numberToAdd = (numberToAdd || 0) + 1;
+          username = `${twitchUsername}_${numberToAdd}`;
+          isValidUsername = await this.verifyUsername(username);
+        }
 
-    if (user.twitchUsername !== twitchUsername) {
-      await this.update(user.id, { twitchUsername });
-    }
+        user = await this.register(
+          {
+            email: twitchEmail,
+            username,
+            twitchId,
+            profileImageUrl,
+            twitchUsername,
+          },
+          'twitch',
+        );
+        isNewRegistration = true;
+      } else {
+        if (user.profileImageUrl !== profileImageUrl) {
+          await this.update(user.id, { profileImageUrl });
+        }
 
-    if (email && email !== user.email) {
-      await this.update(user.id, { email });
-    } else if (!user.email && !email) {
-      throw new UnauthorizedException(
-        'User not registered, please log in to Tournier.xyz to register',
-      );
-    }
+        if (user.username !== twitchUsername) {
+          await this.update(user.id, { twitchUsername });
+        }
 
-    if (code)
+        if (twitchEmail && twitchEmail !== user.email) {
+          await this.update(user.id, { email: twitchEmail });
+        } else if (!user.email && !twitchEmail) {
+          throw new UnauthorizedException(
+            'User not registered, please log in to Tournier.xyz to register',
+          );
+        }
+      }
+
       return {
         token: this.getJwToken({
           id: user.id,
-          twitchUsername: user.twitchUsername,
+          username: user.username,
         }),
+        isNewRegistration,
       };
-    else return {};
+    } else {
+      if (!loginUserDto.username || !loginUserDto.password)
+        throw new BadRequestException(
+          'A username and password are needed to login',
+        );
+
+      const { password } = loginUserDto;
+
+      user = await this.userRepository.findOne({
+        where: { username: loginUserDto.username, isActive: true },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          password: true,
+        },
+      });
+
+      if (!user || !bcrypt.compareSync(password, user.password ?? ''))
+        throw new UnauthorizedException('Invalid username or password');
+
+      const token = this.getJwToken({ id: user.id, username: user.username });
+      return { token };
+    }
   }
 
-  async findOneTwitchAndRegister(twitchUsername: string) {
-    twitchUsername = twitchUsername.toLowerCase();
+  async verifyUsername(username: string) {
+    try {
+      if (await this.findOne(username)) return false;
+      else return true;
+    } catch (error) {
+      this.handleDBErrors(error);
+    }
+  }
+
+  async findOneTwitchAndRegister(username: string) {
+    username = username.toLowerCase();
     //* Get own token
     const body = {
       client_id: this.configService.get('TWITCH_CLIENT_ID'),
@@ -184,32 +271,27 @@ export class AuthService {
       throw new UnauthorizedException('Twitch authentication denied');
     const token: string = tokenData.access_token;
 
-    const userFetchData = await this.getUserData(
-      undefined,
-      token,
-      twitchUsername,
-    );
+    const userFetchData = await this.getUserData(undefined, token, username);
 
     let userData: any;
 
     if (!userFetchData.data[0]) {
-      throw new BadRequestException(
-        `User '${twitchUsername}' not found on twitch`,
-      );
+      throw new BadRequestException(`User '${username}' not found on twitch`);
     } else userData = userFetchData.data[0];
 
     const twitchId = userData.id;
-    const twitchProfileImageUrl = userData.profile_image_url;
+    const profileImageUrl = userData.profile_image_url;
 
-    return this.register({ twitchId, twitchUsername, twitchProfileImageUrl });
+    return this.register({ twitchId, username, profileImageUrl });
   }
-  //TODO: Only admins can update roles, twitchusername, isactive
+
+  //TODO: Only admins can update roles, username, isactive
   async update(id: string, updateUserDto: UpdateUserDto) {
-    const twitchUsername = updateUserDto.twitchUsername?.toLowerCase();
+    const username = updateUserDto.username?.toLowerCase();
     const user = await this.userRepository.preload({
       id,
       ...updateUserDto,
-      twitchUsername,
+      username,
     });
 
     try {
@@ -273,7 +355,7 @@ export class AuthService {
     }
   }
 
-  async getUserData(twitchId: string, token: string, twitchUsername?: string) {
+  async getUserData(twitchId: string, token: string, username?: string) {
     try {
       let userFetchData: AxiosResponse;
       if (twitchId) {
@@ -287,9 +369,9 @@ export class AuthService {
             },
           },
         );
-      } else if (twitchUsername) {
+      } else if (username) {
         userFetchData = await axios.get(
-          'https://api.twitch.tv/helix/users?login=' + twitchUsername,
+          'https://api.twitch.tv/helix/users?login=' + username,
           {
             headers: {
               Authorization: 'Bearer ' + token,
@@ -311,7 +393,16 @@ export class AuthService {
   }
 
   private handleDBErrors(error: any): never {
-    if (error.code === '23505') throw new BadRequestException(error.detail);
+    if (error.code === '23505') {
+      let errorString = error.detail.replace('Key (', '');
+      errorString = errorString.replace(')=(', "'");
+      errorString = errorString.replace(')', "'");
+      errorString = errorString.replace(
+        'already exists',
+        'is already registered',
+      );
+      throw new BadRequestException(errorString);
+    }
 
     console.log(error);
 

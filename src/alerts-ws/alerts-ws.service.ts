@@ -25,12 +25,12 @@ export class AlertsWsService {
 
   async registerClient(client: Socket, payload: JwtPayload) {
     const newSockets: UserSocket = {};
-    const connectedClient = this.connectedClients[payload.twitchUsername];
+    const connectedClient = this.connectedClients[payload.username];
 
     if (connectedClient) {
       if (Object.keys(connectedClient.sockets).length > 1)
         throw new Error(
-          `Client '${payload.twitchUsername}' connected on too many sessions`,
+          `Client '${payload.username}' connected on too many sessions`,
         );
       for (const socket in connectedClient.sockets) {
         newSockets[socket] = connectedClient.sockets[socket];
@@ -46,32 +46,30 @@ export class AlertsWsService {
       .getOne();
 
     if (!user || !user.isActive) {
-      throw new Error(
-        `User '${payload.twitchUsername}' not found on alerts-ws`,
-      );
+      throw new Error(`User '${payload.username}' not found on alerts-ws`);
     }
 
-    this.connectedClients[user.twitchUsername] = { sockets: newSockets, user };
+    this.connectedClients[user.username] = { sockets: newSockets, user };
     console.log('connected', Object.keys(this.connectedClients).length);
     console.log(
-      `${payload.twitchUsername} connected on ${
+      `${payload.username} connected on ${
         Object.keys(newSockets).length
       } sessions`,
     );
   }
 
-  removeClient(client: Socket, twitchUsername: string) {
+  removeClient(client: Socket, username: string) {
     const connectedClientSockets =
-      this.connectedClients[twitchUsername]?.sockets || {};
+      this.connectedClients[username]?.sockets || {};
     if (Object.keys(connectedClientSockets).length > 1) {
-      delete this.connectedClients[twitchUsername].sockets[client.id];
+      delete this.connectedClients[username].sockets[client.id];
     } else {
-      delete this.connectedClients[twitchUsername];
+      delete this.connectedClients[username];
     }
     console.log('disconnected', Object.keys(this.connectedClients).length);
   }
 
-  getConnectedClient(twitchUsername: string) {
-    return this.connectedClients[twitchUsername];
+  getConnectedClient(username: string) {
+    return this.connectedClients[username];
   }
 }

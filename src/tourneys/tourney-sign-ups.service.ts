@@ -82,7 +82,7 @@ export class TourneySignUpsService {
       await this.tourneySignUpsRepository.save(signUp);
       this.tourneysWsGateway.emitSignUpUpdate(tourney.id, signUp);
       return {
-        message: `${signUp.captain.twitchUsername} checked in!`,
+        message: `${signUp.captain.username} checked in!`,
         status: 200,
       };
     } catch (error) {

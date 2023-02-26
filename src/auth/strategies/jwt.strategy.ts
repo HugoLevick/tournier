@@ -29,9 +29,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       where: { id },
       select: {
         id: true,
-        twitchUsername: true,
+        username: true,
         twitchId: true,
-        twitchProfileImageUrl: true,
+        profileImageUrl: true,
         email: true,
         isActive: true,
         role: true,
