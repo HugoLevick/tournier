@@ -496,25 +496,16 @@ export class TourneysService {
       }
     }
 
+    if (verifiedInvites) {
+      invite.fromTeam.verifiedInvites = true;
+      this.tourneySignUpsRepository.save(invite.fromTeam);
+    }
+
     this.tourneysWsGateway.emitInviteAccept(
       invite.fromTeam.tourney.id,
       user,
       invite,
       verifiedInvites,
-    );
-
-    if (verifiedInvites) {
-      invite.fromTeam.verifiedInvites = true;
-      this.tourneySignUpsRepository.save(invite.fromTeam);
-      this.tourneysWsGateway.emitSignUpUpdate(
-        invite.fromTeam.tourney.id,
-        invite.fromTeam,
-      );
-    }
-
-    this.tourneysWsGateway.emitSignUpUpdate(
-      invite.fromTeam.tourney.id,
-      invite.fromTeam,
     );
 
     return {

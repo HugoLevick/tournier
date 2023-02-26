@@ -65,6 +65,19 @@ function connectToTourneyWs() {
     updateSignUpsNumbers();
   });
 
+  socket.on('inv-update-t-' + tourney.id, (updatedInv) => {
+    const team = tourney.signUps.find((t) => t.id == updatedInv.fromTeam.id);
+    console.log(updatedInv);
+    for (teamInvite of team.invited) {
+      if (teamInvite.toUser.id === updatedInv.toUser.id) {
+        teamInvite.accepted = true;
+        team.verifiedInvites = updatedInv.fromTeam.verifiedInvites;
+      }
+    }
+    updateSignUpHtml(team);
+    updateSignUpsNumbers();
+  });
+
   socket.on('sign-up-t-' + tourney.id, (team) => {
     tourney.signUps.push(team);
     addNewSignup(team);

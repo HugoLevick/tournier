@@ -671,7 +671,6 @@ async function doneTyping() {
 
 async function addNewSignup(team) {
   const placeholder = document.getElementById('player-table-placeholder');
-  console.log(team);
   const acceptedInvite = team.invited.filter((inv) => {
     return inv.accepted && inv.toUser.username === user.username;
   });
