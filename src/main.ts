@@ -18,6 +18,14 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  app.enableCors({
+    origin: [
+      'https://tournier.xyz',
+      'https://www.tournier.xyz',
+      'http://localhost:3000',
+    ],
+  });
+
   await app.listen(process.env.PORT);
 
   logger.log('App running on port ' + process.env.PORT);

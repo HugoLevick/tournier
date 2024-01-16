@@ -127,7 +127,7 @@ export class AuthService {
       //   grant_type: 'client_credentials',
       // };
 
-      //Encode body
+      //Encode body in x-form-encode
       const encodedBody = this.encodeBody(body);
 
       const tokenData = await this.getTwitchTokenData(encodedBody);
@@ -176,6 +176,7 @@ export class AuthService {
       if (!user) {
         let username = twitchUsername;
         let isValidUsername = await this.verifyUsername(username);
+        //Assign a valid username if twitch username isnt one
         let numberToAdd: number;
         while (!isValidUsername) {
           numberToAdd = (numberToAdd || 0) + 1;
@@ -332,6 +333,9 @@ export class AuthService {
       const { data: tokenData } = await axios.post(
         'https://id.twitch.tv/oauth2/token',
         encodedBody,
+        {
+          headers: {},
+        },
       );
       return tokenData;
     } catch (error) {
